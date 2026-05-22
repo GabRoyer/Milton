@@ -1,0 +1,11 @@
+packages:
+  - "."
+  - "apps/*"
+  - "packages/*"
+allowBuilds:
+  '@azure/msal-node-extensions': true
+  '@azure/msal-node-runtime': true
+  '@microsoft/m365agentstoolkit-cli': true
+  '@swc/core': true
+  esbuild: true
+  keytar: true

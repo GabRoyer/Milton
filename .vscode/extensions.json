@@ -1,0 +1,8 @@
+{
+  "recommendations": [
+    "ms-edgedevtools.vscode-edge-devtools",
+    "esbenp.prettier-vscode",
+    "msoffice.microsoft-office-add-in-debugger"
+  ],
+  "unwantedRecommendations": []
+}
