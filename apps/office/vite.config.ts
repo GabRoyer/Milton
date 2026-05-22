@@ -27,8 +27,8 @@ export default defineConfig(async ({ command }) => {
       outDir: "dist",
       rollupOptions: {
         input: {
-          taskpane: resolve(rootDir, "app/taskpane/taskpane.html"),
-          commands: resolve(rootDir, "app/commands/commands.html"),
+          taskpane: resolve(rootDir, "taskpanes/excel/taskpane.html"),
+          commands: resolve(rootDir, "commands/commands.html"),
         },
       },
     },

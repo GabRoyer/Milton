@@ -9,3 +9,7 @@ allowBuilds:
   '@swc/core': true
   esbuild: true
   keytar: true
+packageExtensions:
+  office-addin-dev-settings@*:
+    dependencies:
+      semver: ^7.8.1

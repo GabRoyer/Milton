@@ -4,10 +4,17 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+packageExtensionsChecksum: sha256-j9keKrflRLzpgAka+PFtaenIxQhtXXekxV0X2hnpq4k=
+
 importers:
 
-  .:
+  .: {}
+
+  apps/office:
     dependencies:
+      '@milton/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       react:
         specifier: ^18.2.0
         version: 18.3.1
@@ -42,15 +49,40 @@ importers:
       office-addin-manifest:
         specifier: ^2.0.3
         version: 2.1.5
-      semver:
-        specifier: ^7.8.1
-        version: 7.8.1
       typescript:
         specifier: ^5.4.2
         version: 5.9.3
       vite:
         specifier: ^5.4.11
         version: 5.4.21(@types/node@22.19.19)(terser@5.48.0)
+
+  packages/office-host:
+    devDependencies:
+      '@types/office-js':
+        specifier: ^1.0.377
+        version: 1.0.591
+      typescript:
+        specifier: ^5.4.2
+        version: 5.9.3
+
+  packages/ui:
+    dependencies:
+      '@milton/office-host':
+        specifier: workspace:*
+        version: link:../office-host
+      react:
+        specifier: ^18.2.0
+        version: 18.3.1
+    devDependencies:
+      '@types/office-js':
+        specifier: ^1.0.377
+        version: 1.0.591
+      '@types/react':
+        specifier: ^18.2.64
+        version: 18.3.29
+      typescript:
+        specifier: ^5.4.2
+        version: 5.9.3
 
 packages:
 
@@ -4574,6 +4606,7 @@ snapshots:
       office-addin-manifest: 2.1.5
       office-addin-usage-data: 2.1.0
       open: 6.4.0
+      semver: 7.8.1
       whatwg-url: 14.2.0
       winreg: 1.2.4
     transitivePeerDependencies:

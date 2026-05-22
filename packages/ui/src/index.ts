@@ -1,0 +1,1 @@
+export { ExcelTaskpaneApp } from "./ExcelTaskpaneApp";

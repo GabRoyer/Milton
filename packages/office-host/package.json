@@ -1,0 +1,19 @@
+{
+  "name": "@milton/office-host",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "description": "Typed Office host integrations for Milton.",
+  "license": "MIT",
+  "exports": {
+    ".": "./src/index.ts",
+    "./excel": "./src/excel/index.ts"
+  },
+  "scripts": {
+    "build": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/office-js": "^1.0.377",
+    "typescript": "^5.4.2"
+  }
+}

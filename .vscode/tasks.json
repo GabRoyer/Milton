@@ -3,8 +3,9 @@
   "tasks": [
     {
       "label": "Build",
-      "type": "npm",
-      "script": "build",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["build"],
       "group": {
         "kind": "build",
         "isDefault": true
@@ -18,8 +19,9 @@
     },
     {
       "label": "Dev Server",
-      "type": "npm",
-      "script": "dev",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["dev"],
       "presentation": {
         "clear": true,
         "panel": "dedicated"
@@ -29,8 +31,8 @@
     {
       "label": "Debug: Excel Desktop",
       "type": "shell",
-      "command": "npm",
-      "args": ["run", "start", "--", "desktop", "--app", "excel"],
+      "command": "pnpm",
+      "args": ["start"],
       "presentation": {
         "clear": true,
         "panel": "dedicated"
@@ -39,8 +41,9 @@
     },
     {
       "label": "Stop Debug",
-      "type": "npm",
-      "script": "stop",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["stop"],
       "presentation": {
         "clear": true,
         "panel": "shared",
@@ -49,15 +52,10 @@
       "problemMatcher": []
     },
     {
-      "label": "Typecheck",
-      "type": "npm",
-      "script": "typecheck",
-      "problemMatcher": "$tsc"
-    },
-    {
       "label": "Validate Manifest",
-      "type": "npm",
-      "script": "validate",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["validate"],
       "problemMatcher": []
     }
   ]

@@ -1,7 +1,6 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "useDefineForClassFields": true,
     "lib": ["DOM", "DOM.Iterable", "ES2020"],
     "allowJs": false,
     "skipLibCheck": true,
@@ -11,11 +10,10 @@
     "forceConsistentCasingInFileNames": true,
     "module": "ESNext",
     "moduleResolution": "Bundler",
-    "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    "types": ["node", "office-js", "vite/client"]
+    "types": ["office-js"]
   },
-  "include": ["app", "vite.config.ts"]
+  "include": ["src"]
 }

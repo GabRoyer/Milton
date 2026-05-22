@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { insertText } from "./excel";
+import { insertText } from "@milton/office-host/excel";
 
-export default function App() {
+export function ExcelTaskpaneApp() {
   const [text, setText] = useState("Ask Milton to analyze this workbook.");
   const [status, setStatus] = useState<string | null>(null);
 

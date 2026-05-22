@@ -1,0 +1,39 @@
+{
+  "name": "@milton/office",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "description": "Office taskpane app for Milton.",
+  "license": "MIT",
+  "config": {
+    "app_to_debug": "excel",
+    "app_type_to_debug": "desktop",
+    "dev_server_port": 3000
+  },
+  "scripts": {
+    "dev": "vite --host localhost --port 3000",
+    "dev-server": "vite --host localhost --port 3000",
+    "build": "tsc --noEmit && vite build",
+    "start": "office-addin-debugging start manifests/excel.local.xml",
+    "stop": "office-addin-debugging stop manifests/excel.local.xml",
+    "validate": "office-addin-manifest validate manifests/excel.local.xml"
+  },
+  "dependencies": {
+    "@milton/ui": "workspace:*",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.1",
+    "@types/office-js": "^1.0.377",
+    "@types/react": "^18.2.64",
+    "@types/react-dom": "^18.2.21",
+    "@vitejs/plugin-react-swc": "^3.7.2",
+    "office-addin-debugging": "^6.0.3",
+    "office-addin-dev-certs": "^2.0.3",
+    "office-addin-dev-settings": "^3.1.1",
+    "office-addin-manifest": "^2.0.3",
+    "typescript": "^5.4.2",
+    "vite": "^5.4.11"
+  }
+}

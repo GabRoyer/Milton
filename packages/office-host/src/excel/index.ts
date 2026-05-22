@@ -1,4 +1,4 @@
-async function ensureOfficeReady(): Promise<void> {
+async function ensureExcelReady(): Promise<void> {
   if (typeof Office === "undefined") {
     throw new Error("Office.js did not load.");
   }
@@ -11,7 +11,7 @@ async function ensureOfficeReady(): Promise<void> {
 }
 
 export async function insertText(text: string): Promise<void> {
-  await ensureOfficeReady();
+  await ensureExcelReady();
 
   await Excel.run(async (context) => {
     const sheet = context.workbook.worksheets.getActiveWorksheet();

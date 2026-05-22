@@ -8,7 +8,7 @@ pnpm dev
 pnpm start
 ```
 
-`pnpm dev` starts the Vite HTTPS dev server on port 3000. `pnpm start` sideloads `office/manifest.xml` into Excel.
+`pnpm dev` starts the Office app's Vite HTTPS dev server on port 3000. `pnpm start` sideloads `apps/office/manifests/excel.local.xml` into Excel.
 
 Stop a sideloaded debug session with:
 
@@ -19,14 +19,20 @@ pnpm stop
 ## Project layout
 
 ```text
-app/
-  commands/      Office command function page
-  taskpane/      React task pane app
-office/          Office manifest
-public/assets/   Static icon and logo assets served by Vite
+apps/
+  office/
+    commands/          Office command function page
+    manifests/         Office manifests
+    public/assets/     Static icon and logo assets served by Vite
+    taskpanes/excel/   Excel task pane app
+    vite.config.ts     Office app build config
+docs/
+packages/
+  office-host/         Typed Office host integrations
+  ui/                  Shared React UI
 ```
 
-The active Excel manifest is `office/manifest.xml`.
+The active Excel manifest is `apps/office/manifests/excel.local.xml`.
 
 ## Checks
 
@@ -37,4 +43,4 @@ pnpm validate
 
 ## Dependency notes
 
-`semver` is listed explicitly because `office-addin-dev-settings` currently imports it at runtime without declaring it as a dependency.
+`pnpm-workspace.yaml` patches `office-addin-dev-settings` with `semver` because that package currently imports it at runtime without declaring it as a dependency.
