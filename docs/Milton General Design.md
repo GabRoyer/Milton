@@ -419,17 +419,17 @@ local capability bridge
 
 ### Decision
 
-Fork Pi as a distinct package/workspace rather than hard vendoring.
+Fork the needed Pi subpackages as distinct workspaces rather than copying isolated source files into Milton app code.
 
 ### Proposed Structure
 
 ```text
 packages/
-  pi-core/
+  pi-ai/
+  pi-agent-core/
   runtime-office/
   runtime-browser/
-  runtime-local/
-  ui-office/
+  ui/
 ```
 
 ### Rationale
@@ -906,4 +906,3 @@ This is conceptually closer to:
 - AI operating environments
 
 than traditional Office add-ins.
-

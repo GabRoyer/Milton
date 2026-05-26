@@ -13,6 +13,11 @@ const root = createRoot(rootElement);
 
 root.render(
   <StrictMode>
-    <ExcelTaskpaneApp />
+    <ExcelTaskpaneApp
+      openAI={{
+        apiKey: import.meta.env.DEBUG_OPENAI_API_KEY ?? "",
+        model: import.meta.env.DEBUG_OPENAI_MODEL ?? "gpt-5-mini",
+      }}
+    />
   </StrictMode>
 );

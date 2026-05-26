@@ -23,6 +23,7 @@ export default defineConfig(async ({ command }) => {
     plugins: [react()],
     publicDir: "public",
     server,
+    envPrefix: "DEBUG_",
     build: {
       outDir: "dist",
       rollupOptions: {

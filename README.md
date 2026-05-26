@@ -10,6 +10,15 @@ pnpm start
 
 `pnpm dev` starts the Office app's Vite HTTPS dev server on port 3000. `pnpm start` sideloads `apps/office/manifests/excel.local.xml` into Excel.
 
+For the first agent-chat milestone, create `apps/office/.env.local`:
+
+```sh
+DEBUG_OPENAI_API_KEY=sk-...
+DEBUG_OPENAI_MODEL=gpt-5-mini
+```
+
+The task pane calls OpenAI directly from the browser runtime. This is a local development path only because `DEBUG_OPENAI_API_KEY` is exposed to the task pane.
+
 Stop a sideloaded debug session with:
 
 ```sh
@@ -29,6 +38,8 @@ apps/
 docs/
 packages/
   office-host/         Typed Office host integrations
+  pi-agent-core/       Vendored Pi agent package, with a browser entrypoint for Milton
+  pi-ai/               Vendored Pi model/provider abstraction package
   ui/                  Shared React UI
 ```
 

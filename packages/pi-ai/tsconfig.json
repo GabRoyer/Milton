@@ -1,0 +1,23 @@
+{
+	"compilerOptions": {
+		"target": "ES2022",
+		"lib": ["DOM", "DOM.Iterable", "ES2022"],
+		"skipLibCheck": true,
+		"strict": true,
+		"forceConsistentCasingInFileNames": true,
+		"module": "ESNext",
+		"moduleResolution": "Bundler",
+		"allowImportingTsExtensions": true,
+		"resolveJsonModule": true,
+		"isolatedModules": true,
+		"noEmit": true,
+		"types": ["node"]
+	},
+	"files": [
+		"src/models.ts",
+		"src/providers/openai-responses.ts",
+		"src/types.ts",
+		"src/utils/event-stream.ts",
+		"src/utils/validation.ts"
+	]
+}

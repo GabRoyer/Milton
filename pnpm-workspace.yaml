@@ -5,10 +5,12 @@ packages:
 allowBuilds:
   '@azure/msal-node-extensions': true
   '@azure/msal-node-runtime': true
+  '@google/genai': false
   '@microsoft/m365agentstoolkit-cli': true
   '@swc/core': true
   esbuild: true
   keytar: true
+  protobufjs: false
 packageExtensions:
   office-addin-dev-settings@*:
     dependencies:
