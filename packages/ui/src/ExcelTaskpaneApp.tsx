@@ -9,6 +9,9 @@ export interface ExcelTaskpaneAppProps {
     apiKey: string;
     model: string;
   };
+  devProfile?: {
+    label: string;
+  };
 }
 
 const MILTON_SYSTEM_PROMPT =
@@ -34,7 +37,7 @@ const INITIAL_MESSAGES: TaskpaneMessage[] = [
   },
 ];
 
-export function ExcelTaskpaneApp({ openAI }: ExcelTaskpaneAppProps) {
+export function ExcelTaskpaneApp({ devProfile, openAI }: ExcelTaskpaneAppProps) {
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState<TaskpaneMessage[]>(INITIAL_MESSAGES);
   const [isRunning, setIsRunning] = useState(false);
@@ -205,6 +208,7 @@ export function ExcelTaskpaneApp({ openAI }: ExcelTaskpaneAppProps) {
           Reset
         </button>
       </header>
+      {devProfile?.label ? <p className="dev-profile-label">{devProfile.label}</p> : null}
 
       <section className="conversation" aria-label="Conversation">
         {messages.map((message) => (

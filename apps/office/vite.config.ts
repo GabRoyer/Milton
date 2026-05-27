@@ -5,13 +5,15 @@ import { defineConfig } from "vite";
 import * as devCerts from "office-addin-dev-certs";
 
 const rootDir = dirname(fileURLToPath(import.meta.url));
+const devServerPort = Number(process.env.MILTON_OFFICE_PORT ?? 3000);
 
 export default defineConfig(async ({ command }) => {
   const server =
     command === "serve"
       ? {
           host: "localhost",
-          port: 3000,
+          port: devServerPort,
+          strictPort: true,
           https: await devCerts.getHttpsServerOptions(),
           headers: {
             "Access-Control-Allow-Origin": "*",
@@ -23,7 +25,7 @@ export default defineConfig(async ({ command }) => {
     plugins: [react()],
     publicDir: "public",
     server,
-    envPrefix: "DEBUG_",
+    envPrefix: ["DEBUG_", "MILTON_PUBLIC_"],
     build: {
       outDir: "dist",
       rollupOptions: {

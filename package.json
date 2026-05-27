@@ -11,6 +11,9 @@
     "build": "pnpm -r build",
     "start": "pnpm --filter @milton/office start",
     "stop": "pnpm --filter @milton/office stop",
-    "validate": "pnpm --filter @milton/office validate"
+    "validate": "pnpm --filter @milton/office validate",
+    "dev:profiles": "pnpm --filter @milton/office dev:profiles",
+    "dev:clean-profile": "pnpm --filter @milton/office dev:clean-profile",
+    "dev:clean-stale-profiles": "pnpm --filter @milton/office dev:clean-stale-profiles"
   }
 }

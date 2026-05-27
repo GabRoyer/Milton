@@ -7,16 +7,19 @@
   "license": "MIT",
   "config": {
     "app_to_debug": "excel",
-    "app_type_to_debug": "desktop",
-    "dev_server_port": 3000
+    "app_type_to_debug": "desktop"
   },
   "scripts": {
-    "dev": "vite --host localhost --port 3000",
-    "dev-server": "vite --host localhost --port 3000",
+    "dev": "node scripts/dev-profile.mjs dev",
+    "dev-server": "node scripts/dev-profile.mjs dev",
     "build": "tsc --noEmit && vite build",
-    "start": "office-addin-debugging start manifests/excel.local.xml",
-    "stop": "office-addin-debugging stop manifests/excel.local.xml",
-    "validate": "office-addin-manifest validate manifests/excel.local.xml"
+    "start": "node scripts/dev-profile.mjs start",
+    "stop": "node scripts/dev-profile.mjs stop",
+    "validate": "node scripts/dev-profile.mjs validate",
+    "manifest:generate": "node scripts/dev-profile.mjs generate",
+    "dev:profiles": "node scripts/dev-profile.mjs profiles",
+    "dev:clean-profile": "node scripts/dev-profile.mjs clean-profile",
+    "dev:clean-stale-profiles": "node scripts/dev-profile.mjs clean-stale-profiles"
   },
   "dependencies": {
     "@milton/ui": "workspace:*",

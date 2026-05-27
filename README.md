@@ -8,7 +8,7 @@ pnpm dev
 pnpm start
 ```
 
-`pnpm dev` starts the Office app's Vite HTTPS dev server on port 3000. `pnpm start` sideloads `apps/office/manifests/excel.local.xml` into Excel.
+`pnpm dev` starts the Office app's Vite HTTPS dev server on a worktree-derived local port. `pnpm start` generates and sideloads a worktree-specific Excel manifest so multiple Codex worktrees can be debugged side by side.
 
 For the first agent-chat milestone, create `apps/office/.env.local`:
 
@@ -43,7 +43,7 @@ packages/
   ui/                  Shared React UI
 ```
 
-The active Excel manifest is `apps/office/manifests/excel.local.xml`.
+The source local Excel manifest is `apps/office/manifests/excel.local.xml`. Development sideloading uses generated manifests under `apps/office/.generated/`.
 
 ## Checks
 

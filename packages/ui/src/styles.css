@@ -44,6 +44,19 @@ textarea {
   background: #ffffff;
 }
 
+.dev-profile-label {
+  overflow: hidden;
+  border-bottom: 1px solid #d9e0e5;
+  padding: 5px 16px;
+  color: #647280;
+  background: #f9fbfc;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", monospace;
+  font-size: 0.68rem;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .brand-lockup {
   display: flex;
   min-width: 0;
