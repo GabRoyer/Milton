@@ -1,4 +1,3 @@
-import { compileOfficeCode } from "./compiler";
 import { createOfficeCodeCompilerWorkerClient } from "./compiler-worker-client";
 import { createExcelRuntimeContext } from "./runtime-context";
 import type { OfficeCodeCompileResult, OfficeCodeDiagnostic } from "./compiler";
@@ -133,8 +132,9 @@ export async function executeOfficeCode(
 let defaultCompilerClient: ReturnType<typeof createOfficeCodeCompilerWorkerClient> | undefined;
 
 /** Compiles with a lazy worker in browsers and falls back to direct compilation elsewhere. */
-function compileOfficeCodeWithDefaultHost(source: string): OfficeCodeCompileResult | Promise<OfficeCodeCompileResult> {
+async function compileOfficeCodeWithDefaultHost(source: string): Promise<OfficeCodeCompileResult> {
   if (typeof Worker === "undefined") {
+    const { compileOfficeCode } = await import("./compiler");
     return compileOfficeCode(source);
   }
 

@@ -243,7 +243,7 @@ Initial compiler behavior:
 
 - Use a TypeScript `Program` through a virtual compiler host in the compiler worker.
 - Emit modern JavaScript compatible with the Office WebView targets already used by the app.
-- Typecheck generated code against Milton runtime declarations and OfficeJS declarations.
+- Typecheck generated code against Milton runtime declarations and the installed `@types/office-js` declarations.
 - Report syntactic and semantic diagnostics.
 - Strip TypeScript types and emit evaluator-compatible CommonJS-style output.
 - Reject import declarations before evaluation with a clear unsupported-imports diagnostic.
@@ -266,7 +266,7 @@ The virtual compiler host should provide at least:
 
 - the generated source as an in-memory entry file,
 - `ExcelRuntimeContext` declarations,
-- the OfficeJS type declarations needed for Excel,
+- the installed `@types/office-js` declaration file instead of a hand-maintained Excel API subset,
 - standard `ES2020` and DOM library declarations,
 - a no-op module resolver that rejects model-authored imports.
 
@@ -413,7 +413,7 @@ PR scope:
 - Add TypeScript as a runtime dependency where the browser bundle can include it.
 - Implement a lazy compiler worker client.
 - Implement `compileOfficeCode(source)` using a virtual TypeScript compiler host.
-- Include Milton runtime declarations and Excel-focused OfficeJS declarations in the worker.
+- Include Milton runtime declarations and the installed `@types/office-js` declarations in the worker.
 - Implement unsafe evaluator support for `export async function run(ctx)`.
 - Implement `executeOfficeCode(source, options)` with logs, diagnostics, elapsed time, and result normalization.
 - Add unit tests for compilation, semantic diagnostics, missing `run`, thrown runtime errors, returned summaries, and log capture.
