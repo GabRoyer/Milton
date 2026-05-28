@@ -1,4 +1,4 @@
-import type { OfficeCodeCompileResult } from "./types";
+import type { OfficeCodeCompileResult } from "./compiler";
 
 /** Message sent to the compiler worker to compile one source string. */
 interface CompilerWorkerRequest {

@@ -65,4 +65,5 @@ Next PR: <link or pending>
 ## Code Quality
 
 - Avoid barrel import files where practical. Prefer importing from the module that owns the symbol so dependencies stay explicit and refactors remain local.
+- Keep TypeScript type definitions close to the module that owns or primarily uses the contract. Avoid catch-all `types.ts` files unless the type is genuinely shared across unrelated modules and has no clearer owner.
 - Add concise JSDoc headers to TypeScript and JavaScript functions, interfaces, and interface/class fields. Headers should describe purpose or contract, not restate the symbol name; generated code and copied external declarations are exempt.

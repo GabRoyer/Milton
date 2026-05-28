@@ -1,5 +1,4 @@
 import ts from "typescript";
-import type { OfficeCodeCompileResult, OfficeCodeDiagnostic } from "./types";
 
 const ENTRY_FILE = "/entry.ts";
 const LIB_FILE = "/milton-lib.d.ts";
@@ -14,6 +13,31 @@ const compilerOptions: ts.CompilerOptions = {
   skipLibCheck: true,
   noLib: true,
 };
+
+/** Severity levels reported by the Office code compiler. */
+export type OfficeCodeDiagnosticSeverity = "error" | "warning" | "suggestion" | "message";
+
+/** Compiler diagnostic formatted for model and UI consumption. */
+export interface OfficeCodeDiagnostic {
+  /** Diagnostic severity. */
+  severity: OfficeCodeDiagnosticSeverity;
+  /** Human-readable diagnostic message. */
+  message: string;
+  /** One-based source line when available. */
+  line?: number;
+  /** One-based source column when available. */
+  column?: number;
+  /** TypeScript or Milton-specific diagnostic code. */
+  code?: number | string;
+}
+
+/** JavaScript output and diagnostics from compiling generated Office code. */
+export interface OfficeCodeCompileResult {
+  /** Evaluator-compatible JavaScript, empty when compilation fails. */
+  javascript: string;
+  /** Diagnostics collected during compile and emit. */
+  diagnostics: OfficeCodeDiagnostic[];
+}
 
 /** Typechecks generated TypeScript and emits evaluator-compatible JavaScript. */
 export function compileOfficeCode(source: string): OfficeCodeCompileResult {

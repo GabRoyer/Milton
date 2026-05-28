@@ -1,15 +1,34 @@
 import { compileOfficeCode } from "./compiler";
 import { createOfficeCodeCompilerWorkerClient } from "./compiler-worker-client";
 import { createExcelRuntimeContext } from "./runtime-context";
-import type {
-  ExcelRunner,
-  OfficeCodeCompileResult,
-  OfficeCodeDiagnostic,
-  OfficeCodeExecutionDetails,
-  OfficeCodeExecutionResult,
-  OfficeCodeLogEntry,
-} from "./types";
+import type { OfficeCodeCompileResult, OfficeCodeDiagnostic } from "./compiler";
+import type { OfficeCodeLogEntry } from "./runtime-context";
 import { unsafeEvaluateOfficeCode } from "./unsafe-evaluator";
+
+/** Host adapter for running callbacks inside Excel.run. */
+export type ExcelRunner = (callback: (context: Excel.RequestContext) => Promise<void>) => Promise<void>;
+
+/** Structured execution metadata returned by the Office code tool. */
+export interface OfficeCodeExecutionDetails {
+  /** Final execution status. */
+  status: "success" | "error";
+  /** Compile diagnostics associated with the run. */
+  diagnostics: OfficeCodeDiagnostic[];
+  /** Logs emitted by generated code. */
+  logs: OfficeCodeLogEntry[];
+  /** JSON-serializable value returned from run(ctx). */
+  returnValue?: unknown;
+  /** Total elapsed execution time in milliseconds. */
+  elapsedMs: number;
+}
+
+/** User/model-facing content plus structured execution metadata. */
+export interface OfficeCodeExecutionResult {
+  /** Concise text result sent back through the tool transcript. */
+  content: string;
+  /** Structured details for UI and debugging. */
+  details: OfficeCodeExecutionDetails;
+}
 
 /** Dependency injection points for executing generated Office code. */
 export interface ExecuteOfficeCodeOptions {

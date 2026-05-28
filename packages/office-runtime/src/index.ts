@@ -4,13 +4,13 @@ export { executeOfficeCode, OfficeCodeExecutionError } from "./executor";
 export { createExcelRuntimeContext } from "./runtime-context";
 export { unsafeEvaluateOfficeCode } from "./unsafe-evaluator";
 export type {
-  ExcelRunner,
-  ExcelRuntimeContext,
   OfficeCodeCompileResult,
   OfficeCodeDiagnostic,
   OfficeCodeDiagnosticSeverity,
-  OfficeCodeExecutionDetails,
-  OfficeCodeExecutionResult,
-  OfficeCodeLogEntry,
+} from "./compiler";
+export type { ExcelRunner, OfficeCodeExecutionDetails, OfficeCodeExecutionResult } from "./executor";
+export type { ExcelRuntimeContext, OfficeCodeLogEntry } from "./runtime-context";
+export type {
+  OfficeCodeModule,
   OfficeCodeRunFunction,
-} from "./types";
+} from "./unsafe-evaluator";

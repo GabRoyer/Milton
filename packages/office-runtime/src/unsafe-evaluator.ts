@@ -1,4 +1,7 @@
-import type { OfficeCodeRunFunction } from "./types";
+import type { ExcelRuntimeContext } from "./runtime-context";
+
+/** Callable shape expected from evaluated generated Office code. */
+export type OfficeCodeRunFunction = (ctx: ExcelRuntimeContext) => Promise<unknown> | unknown;
 
 /** Evaluated module shape expected from generated Office code. */
 export interface OfficeCodeModule {
