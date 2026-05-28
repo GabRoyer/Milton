@@ -10,12 +10,22 @@ pnpm start
 
 `pnpm dev` starts the Office app's Vite HTTPS dev server on a worktree-derived local port. `pnpm start` generates and sideloads a worktree-specific Excel manifest so multiple Codex worktrees can be debugged side by side.
 
-For the first agent-chat milestone, create `apps/office/.env.local`:
+For the first agent-chat milestone, create a shared local dev env once:
+
+```sh
+pnpm dev:env-init
+```
+
+This creates `~/.config/milton/office-dev.env`. Values in that file are loaded by `pnpm dev`, `pnpm start`, and `pnpm validate` from every worktree.
+
+The env file should contain:
 
 ```sh
 DEBUG_OPENAI_API_KEY=sk-...
 DEBUG_OPENAI_MODEL=gpt-5-mini
 ```
+
+You can still create `apps/office/.env.local` inside one worktree for a worktree-specific override.
 
 The task pane calls OpenAI directly from the browser runtime. This is a local development path only because `DEBUG_OPENAI_API_KEY` is exposed to the task pane.
 

@@ -12,7 +12,10 @@ const manifestTemplatePath = join(packageRoot, "manifests", "excel.local.xml");
 const generatedRoot = join(packageRoot, ".generated");
 const generatedManifestRoot = join(generatedRoot, "manifests");
 const generatedProfilePath = join(generatedRoot, "dev-profile.json");
-const registryPath = join(process.env.XDG_CONFIG_HOME ?? join(homedir(), ".config"), "milton", "office-dev-profiles.json");
+const configRoot = join(process.env.XDG_CONFIG_HOME ?? join(homedir(), ".config"), "milton");
+const userDevEnvPath = join(configRoot, "office-dev.env");
+const localDevEnvPath = join(packageRoot, ".env.local");
+const registryPath = join(configRoot, "office-dev-profiles.json");
 const devNamespaceUuid = "3b2f8544-0f9e-4b9b-9864-14b2c6825457";
 const defaultPortStart = 3100;
 const defaultPortRange = 900;
@@ -51,6 +54,9 @@ async function main() {
       break;
     case "clean-stale-profiles":
       cleanStaleProfiles();
+      break;
+    case "env-init":
+      initUserDevEnv();
       break;
     default:
       console.error(`Unknown dev profile command: ${command}`);
@@ -160,6 +166,33 @@ function cleanStaleProfiles() {
   console.log(`Removed ${removed} stale Milton Office dev profile${removed === 1 ? "" : "s"}.`);
 }
 
+function initUserDevEnv() {
+  if (existsSync(userDevEnvPath)) {
+    console.log(`Milton Office dev env already exists at ${userDevEnvPath}`);
+    return;
+  }
+
+  mkdirSync(dirname(userDevEnvPath), { recursive: true });
+
+  if (existsSync(localDevEnvPath)) {
+    writeFileSync(userDevEnvPath, readFileSync(localDevEnvPath, "utf8"));
+    console.log(`Created Milton Office dev env at ${userDevEnvPath} from ${relative(packageRoot, localDevEnvPath)}`);
+    return;
+  }
+
+  writeFileSync(
+    userDevEnvPath,
+    [
+      "# Shared Milton Office development environment.",
+      "# Values here are loaded by pnpm dev/start/validate in every worktree.",
+      "DEBUG_OPENAI_API_KEY=",
+      "DEBUG_OPENAI_MODEL=gpt-5-mini",
+      "",
+    ].join("\n"),
+  );
+  console.log(`Created Milton Office dev env template at ${userDevEnvPath}`);
+}
+
 async function prepareDevProfile() {
   const profile = await resolveDevProfile({ allocatePort: true, persist: true });
 
@@ -177,10 +210,10 @@ async function resolveDevProfile(options) {
   const profileKey = sha256(profileSeed);
   const shortProfile = profileKey.slice(0, 12);
   const manifestId = uuidV5(profileKey, devNamespaceUuid);
-  const worktreeName = manualProfile || basenameForDisplay(worktreeRoot);
+  const worktreeName = manualProfile || inferWorktreeName(worktreeRoot, shortProfile);
   const branch = gitOutput(["rev-parse", "--abbrev-ref", "HEAD"], worktreeRoot) || "unknown";
   const commit = gitOutput(["rev-parse", "--short", "HEAD"], worktreeRoot) || "unknown";
-  const displayName = `Milton (${worktreeName}-${shortProfile.slice(0, 8)})`;
+  const displayName = `Milton-${worktreeName}`;
   const registry = readRegistry();
   const existing = registry.profiles[shortProfile];
   const envPort = parsePort(process.env.MILTON_OFFICE_PORT);
@@ -188,7 +221,8 @@ async function resolveDevProfile(options) {
   const port = envPort ?? existingPort ?? (options.allocatePort ? await allocatePort(profileKey, registry, shortProfile) : defaultPort(profileKey));
   const origin = `https://localhost:${port}`;
   const manifestPath = join(generatedManifestRoot, `excel.${shortProfile}.xml`);
-  const label = `Milton dev ${shortProfile.slice(0, 8)} | ${branch} | ${commit} | :${port}`;
+  const xmlIdSuffix = `P${shortProfile.slice(0, 8)}`;
+  const label = `${displayName} | ${shortProfile.slice(0, 8)} | ${branch} | ${commit} | :${port}`;
 
   const profile = {
     profileKey,
@@ -197,6 +231,7 @@ async function resolveDevProfile(options) {
     worktreeName,
     displayName,
     manifestId,
+    xmlIdSuffix,
     port,
     origin,
     manifestPath,
@@ -212,6 +247,7 @@ async function resolveDevProfile(options) {
       worktreeRoot,
       displayName,
       manifestId,
+      xmlIdSuffix,
       port,
       manifestPath,
       updatedAt: profile.generatedAt,
@@ -245,11 +281,17 @@ function defaultPort(profileKey) {
 
 function generateManifest(profile) {
   const displayName = escapeXmlAttribute(profile.displayName);
+  const buttonLabel = escapeXmlAttribute(`Open ${profile.displayName}`);
   const origin = profile.origin;
 
   return readFileSync(manifestTemplatePath, "utf8")
     .replace(/<Id>[^<]+<\/Id>/, `<Id>${profile.manifestId}</Id>`)
     .replace(/<DisplayName DefaultValue="[^"]*"\/>/, `<DisplayName DefaultValue="${displayName}"/>`)
+    .replace(/<Group id="CommandsGroup">/, `<Group id="CommandsGroup${profile.xmlIdSuffix}">`)
+    .replace(/<Control xsi:type="Button" id="TaskpaneButton">/, `<Control xsi:type="Button" id="TaskpaneButton${profile.xmlIdSuffix}">`)
+    .replace(/<TaskpaneId>ButtonId1<\/TaskpaneId>/, `<TaskpaneId>ButtonId${profile.xmlIdSuffix}</TaskpaneId>`)
+    .replace(/<bt:String id="CommandsGroup.Label" DefaultValue="[^"]*"\/>/, `<bt:String id="CommandsGroup.Label" DefaultValue="${displayName}"/>`)
+    .replace(/<bt:String id="TaskpaneButton.Label" DefaultValue="[^"]*"\/>/, `<bt:String id="TaskpaneButton.Label" DefaultValue="${buttonLabel}"/>`)
     .replace(/https:\/\/localhost:\d+/g, origin);
 }
 
@@ -279,7 +321,10 @@ async function spawnPassthrough(commandName, args, profile) {
 }
 
 function profileEnv(profile) {
+  const devEnv = readDevEnv();
+
   return {
+    ...devEnv,
     ...process.env,
     MILTON_OFFICE_PORT: String(profile.port),
     MILTON_PUBLIC_DEV_PROFILE: profile.shortProfile,
@@ -290,6 +335,120 @@ function profileEnv(profile) {
     MILTON_PUBLIC_DEV_WORKTREE: profile.worktreeName,
     npm_package_config_dev_server_port: String(profile.port),
   };
+}
+
+function readDevEnv() {
+  return {
+    ...readEnvFile(userDevEnvPath),
+    ...readEnvFile(localDevEnvPath),
+  };
+}
+
+function readEnvFile(filePath) {
+  if (!existsSync(filePath)) {
+    return {};
+  }
+
+  const values = {};
+  const contents = readFileSync(filePath, "utf8");
+
+  for (const rawLine of contents.split(/\r?\n/)) {
+    const parsed = parseEnvLine(rawLine);
+
+    if (parsed) {
+      values[parsed.key] = parsed.value;
+    }
+  }
+
+  return values;
+}
+
+function parseEnvLine(rawLine) {
+  const line = rawLine.trim();
+
+  if (!line || line.startsWith("#")) {
+    return undefined;
+  }
+
+  const normalizedLine = line.startsWith("export ") ? line.slice("export ".length).trimStart() : line;
+  const equalsIndex = normalizedLine.indexOf("=");
+
+  if (equalsIndex <= 0) {
+    return undefined;
+  }
+
+  const key = normalizedLine.slice(0, equalsIndex).trim();
+
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) {
+    return undefined;
+  }
+
+  return {
+    key,
+    value: parseEnvValue(normalizedLine.slice(equalsIndex + 1).trim()),
+  };
+}
+
+function parseEnvValue(rawValue) {
+  if (!rawValue) {
+    return "";
+  }
+
+  if (rawValue.startsWith("\"")) {
+    return parseQuotedEnvValue(rawValue, "\"");
+  }
+
+  if (rawValue.startsWith("'")) {
+    return parseQuotedEnvValue(rawValue, "'");
+  }
+
+  return stripEnvComment(rawValue).trim();
+}
+
+function parseQuotedEnvValue(rawValue, quote) {
+  let value = "";
+  let escaped = false;
+
+  for (let index = 1; index < rawValue.length; index += 1) {
+    const character = rawValue[index];
+
+    if (escaped) {
+      value += quote === "\"" ? unescapeDoubleQuotedEnvCharacter(character) : character;
+      escaped = false;
+      continue;
+    }
+
+    if (character === "\\" && quote === "\"") {
+      escaped = true;
+      continue;
+    }
+
+    if (character === quote) {
+      break;
+    }
+
+    value += character;
+  }
+
+  return value;
+}
+
+function unescapeDoubleQuotedEnvCharacter(character) {
+  switch (character) {
+    case "n":
+      return "\n";
+    case "r":
+      return "\r";
+    case "t":
+      return "\t";
+    default:
+      return character;
+  }
+}
+
+function stripEnvComment(value) {
+  const commentIndex = value.search(/\s#/);
+  return commentIndex === -1 ? value : value.slice(0, commentIndex);
 }
 
 function isPortAvailable(port) {
@@ -393,10 +552,41 @@ function parsePort(value) {
   return Number.isInteger(port) && port > 0 && port < 65536 ? port : undefined;
 }
 
+function inferWorktreeName(filePath, shortProfile) {
+  const basename = basenameForDisplay(filePath);
+  const miltonSuffix = basename.match(/^Milton[-_](.+)$/i)?.[1];
+
+  if (miltonSuffix) {
+    return sanitizeDisplayToken(miltonSuffix);
+  }
+
+  const numericSegment = filePath
+    .split(/[/\\]+/)
+    .reverse()
+    .find((segment) => /^\d{3,8}$/.test(segment));
+
+  if (numericSegment) {
+    return numericSegment;
+  }
+
+  const basenameNumber = basename.match(/(?:^|[-_])(\d{3,8})(?:[-_]|$)/)?.[1];
+
+  if (basenameNumber) {
+    return basenameNumber;
+  }
+
+  return shortProfile.slice(0, 8);
+}
+
 function basenameForDisplay(filePath) {
   const normalized = filePath.replace(/\/+$/, "");
   const basename = normalized.split("/").pop();
   return basename || "worktree";
+}
+
+function sanitizeDisplayToken(value) {
+  const token = value.replace(/[^A-Za-z0-9-]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+  return token || "worktree";
 }
 
 function sha256(value) {

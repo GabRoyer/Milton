@@ -13,6 +13,7 @@
     "stop": "pnpm --filter @milton/office stop",
     "validate": "pnpm --filter @milton/office validate",
     "dev:profiles": "pnpm --filter @milton/office dev:profiles",
+    "dev:env-init": "pnpm --filter @milton/office dev:env-init",
     "dev:clean-profile": "pnpm --filter @milton/office dev:clean-profile",
     "dev:clean-stale-profiles": "pnpm --filter @milton/office dev:clean-stale-profiles"
   }

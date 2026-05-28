@@ -104,10 +104,12 @@ Recommended derived fields:
 ```text
 profileKey      sha256(realpath)
 shortProfile    first 8-12 hex chars of profileKey
-displayName     Milton (<worktree basename>-<shortProfile>)
+displayName     Milton-<human worktree token>
 manifestId      UUIDv5(profileKey, Milton development namespace UUID)
 defaultPort     deterministic port from profileKey
 ```
+
+The human worktree token should prefer a visible Codex/worktree identifier from the path. For example, `/Users/groyer/.codex/worktrees/4607/Milton` should display as `Milton-4607`, while a path without a visible worktree token can fall back to the short profile hash.
 
 The generated manifest should replace at least:
 
@@ -122,7 +124,7 @@ The generated manifest should replace at least:
 - `Taskpane.Url`
 - icon resource URLs
 
-It is also reasonable to make command IDs and group IDs profile-specific if Excel proves sticky about cached command surfaces.
+Command IDs, group IDs, and task pane IDs should be profile-specific. This gives Excel's ribbon/cache layer fewer opportunities to confuse two generated development manifests.
 
 ---
 
@@ -261,6 +263,43 @@ Useful fields:
 - build timestamp or Vite startup timestamp
 
 This should be visually quiet, but always available in development. When two Excel task panes are open, the label should make it immediately clear which worktree each pane belongs to.
+
+---
+
+## Shared Dev Environment
+
+Worktree-specific generated manifests should not require copying API keys into every worktree.
+
+The Office dev-profile script should load a shared user-level env file:
+
+```text
+~/.config/milton/office-dev.env
+```
+
+Example:
+
+```sh
+DEBUG_OPENAI_API_KEY=sk-...
+DEBUG_OPENAI_MODEL=gpt-5-mini
+```
+
+The merge order should be:
+
+```text
+shared user env
+  -> apps/office/.env.local
+  -> shell environment
+```
+
+That keeps the shared file as the default for every worktree, while allowing a single worktree or shell session to override it.
+
+The helper command should initialize the shared file:
+
+```sh
+pnpm dev:env-init
+```
+
+If `apps/office/.env.local` exists, the helper can seed the shared file from it. Otherwise it should create a template.
 
 ---
 

@@ -18,6 +18,7 @@
     "validate": "node scripts/dev-profile.mjs validate",
     "manifest:generate": "node scripts/dev-profile.mjs generate",
     "dev:profiles": "node scripts/dev-profile.mjs profiles",
+    "dev:env-init": "node scripts/dev-profile.mjs env-init",
     "dev:clean-profile": "node scripts/dev-profile.mjs clean-profile",
     "dev:clean-stale-profiles": "node scripts/dev-profile.mjs clean-stale-profiles"
   },
