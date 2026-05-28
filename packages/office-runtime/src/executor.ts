@@ -11,17 +11,26 @@ import type {
 } from "./types";
 import { unsafeEvaluateOfficeCode } from "./unsafe-evaluator";
 
+/** Dependency injection points for executing generated Office code. */
 export interface ExecuteOfficeCodeOptions {
+  /** Optional compiler override, typically for tests. */
   compile?: (source: string) => OfficeCodeCompileResult | Promise<OfficeCodeCompileResult>;
+  /** Optional evaluator override, typically for future sandboxing or tests. */
   evaluate?: typeof unsafeEvaluateOfficeCode;
+  /** Optional Excel.run adapter override, typically for tests. */
   excelRunner?: ExcelRunner;
+  /** Optional cancellation signal checked around cooperative execution boundaries. */
   signal?: AbortSignal;
+  /** Optional clock override used for deterministic elapsed-time tests. */
   now?: () => number;
 }
 
+/** Error wrapper that carries structured execution details. */
 export class OfficeCodeExecutionError extends Error {
+  /** Structured details available to UI and tool-result handling. */
   public readonly details: OfficeCodeExecutionDetails;
 
+  /** Creates an execution error with model-facing text and structured details. */
   constructor(message: string, details: OfficeCodeExecutionDetails) {
     super(message);
     this.name = "OfficeCodeExecutionError";
@@ -29,6 +38,7 @@ export class OfficeCodeExecutionError extends Error {
   }
 }
 
+/** Compiles, evaluates, and executes generated TypeScript against the Excel host. */
 export async function executeOfficeCode(
   source: string,
   options: ExecuteOfficeCodeOptions = {},
@@ -103,6 +113,7 @@ export async function executeOfficeCode(
 
 let defaultCompilerClient: ReturnType<typeof createOfficeCodeCompilerWorkerClient> | undefined;
 
+/** Compiles with a lazy worker in browsers and falls back to direct compilation elsewhere. */
 function compileOfficeCodeWithDefaultHost(source: string): OfficeCodeCompileResult | Promise<OfficeCodeCompileResult> {
   if (typeof Worker === "undefined") {
     return compileOfficeCode(source);
@@ -112,6 +123,7 @@ function compileOfficeCodeWithDefaultHost(source: string): OfficeCodeCompileResu
   return defaultCompilerClient.compile(source);
 }
 
+/** Runs an OfficeJS callback through the ambient Excel host. */
 async function defaultExcelRunner(callback: Parameters<ExcelRunner>[0]): Promise<void> {
   const excel = (globalThis as typeof globalThis & { Excel?: { run?: ExcelRunner } }).Excel;
 
@@ -122,6 +134,7 @@ async function defaultExcelRunner(callback: Parameters<ExcelRunner>[0]): Promise
   await excel.run(callback);
 }
 
+/** Formats the first TypeScript diagnostic as a concise tool error. */
 function formatCompileError(diagnostic: OfficeCodeExecutionDetails["diagnostics"][number]): string {
   const location =
     diagnostic.line !== undefined && diagnostic.column !== undefined
@@ -131,12 +144,14 @@ function formatCompileError(diagnostic: OfficeCodeExecutionDetails["diagnostics"
   return `TypeScript compilation failed: ${location}${diagnostic.message}`;
 }
 
+/** Throws when the cooperative execution signal has already been aborted. */
 function throwIfAborted(signal: AbortSignal | undefined): void {
   if (signal?.aborted) {
     throw new Error(signal.reason instanceof Error ? signal.reason.message : "OfficeJS code execution was cancelled.");
   }
 }
 
+/** Normalizes returned data to the JSON-compatible contract promised to the model. */
 function toJsonSerializable(value: unknown): unknown {
   if (value === undefined) {
     return undefined;
@@ -149,6 +164,7 @@ function toJsonSerializable(value: unknown): unknown {
   }
 }
 
+/** Builds concise tool-result text from the generated code return value. */
 function getSuccessContent(returnValue: unknown): string {
   if (isSummaryObject(returnValue)) {
     return returnValue.summary;
@@ -157,6 +173,7 @@ function getSuccessContent(returnValue: unknown): string {
   return "OfficeJS code executed successfully.";
 }
 
+/** Checks whether a returned value includes a model-facing summary string. */
 function isSummaryObject(value: unknown): value is { summary: string } {
   return (
     typeof value === "object" &&

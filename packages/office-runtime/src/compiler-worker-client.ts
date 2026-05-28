@@ -1,35 +1,55 @@
 import type { OfficeCodeCompileResult } from "./types";
 
+/** Message sent to the compiler worker to compile one source string. */
 interface CompilerWorkerRequest {
+  /** Request id used to pair worker responses with callers. */
   id: number;
+  /** Discriminator for compile requests. */
   type: "compile";
+  /** Generated TypeScript source to compile. */
   source: string;
 }
 
+/** Successful compiler worker response. */
 interface CompilerWorkerResult {
+  /** Request id copied from the original request. */
   id: number;
+  /** Discriminator for successful responses. */
   type: "result";
+  /** Compile result produced by the worker. */
   result: OfficeCodeCompileResult;
 }
 
+/** Failed compiler worker response. */
 interface CompilerWorkerError {
+  /** Request id copied from the original request. */
   id: number;
+  /** Discriminator for failed responses. */
   type: "error";
+  /** Error message produced while compiling. */
   message: string;
 }
 
+/** Union of all compiler worker responses. */
 type CompilerWorkerResponse = CompilerWorkerResult | CompilerWorkerError;
 
+/** Client wrapper that tracks pending compiler worker requests. */
 export interface OfficeCodeCompilerWorkerClient {
+  /** Compiles generated TypeScript source in the worker. */
   compile(source: string): Promise<OfficeCodeCompileResult>;
+  /** Terminates the worker and rejects pending compile requests. */
   dispose(): void;
 }
 
+/** Construction options for injecting or creating a compiler worker. */
 export interface CreateOfficeCodeCompilerWorkerClientOptions {
+  /** Existing worker instance, primarily for tests or custom hosts. */
   worker?: Worker;
+  /** Factory used to lazily create the worker. */
   createWorker?: () => Worker;
 }
 
+/** Creates a request/response client for the Office code compiler worker. */
 export function createOfficeCodeCompilerWorkerClient(
   options: CreateOfficeCodeCompilerWorkerClientOptions = {},
 ): OfficeCodeCompilerWorkerClient {
@@ -88,6 +108,7 @@ export function createOfficeCodeCompilerWorkerClient(
   };
 }
 
+/** Creates the default module worker that hosts the TypeScript compiler. */
 function createDefaultCompilerWorker(): Worker {
   if (typeof Worker === "undefined") {
     throw new Error("Office code compiler workers are not available in this runtime.");
@@ -98,7 +119,10 @@ function createDefaultCompilerWorker(): Worker {
   });
 }
 
+/** Pending compile request callbacks stored until the worker responds. */
 interface PendingCompile {
+  /** Resolves the compile promise with a worker result. */
   resolve: (result: OfficeCodeCompileResult) => void;
+  /** Rejects the compile promise when worker execution fails. */
   reject: (error: Error) => void;
 }

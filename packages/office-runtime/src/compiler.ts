@@ -15,6 +15,7 @@ const compilerOptions: ts.CompilerOptions = {
   noLib: true,
 };
 
+/** Typechecks generated TypeScript and emits evaluator-compatible JavaScript. */
 export function compileOfficeCode(source: string): OfficeCodeCompileResult {
   const importDiagnostics = findUnsupportedImportDiagnostics(source);
 
@@ -63,6 +64,7 @@ export function compileOfficeCode(source: string): OfficeCodeCompileResult {
   };
 }
 
+/** Creates an in-memory TypeScript compiler host for generated Office code. */
 function createCompilerHost(files: Map<string, string>, writeFile: ts.WriteFileCallback): ts.CompilerHost {
   return {
     getSourceFile(fileName, languageVersion) {
@@ -88,10 +90,12 @@ function createCompilerHost(files: Map<string, string>, writeFile: ts.WriteFileC
   };
 }
 
+/** Finds unsupported imports before TypeScript tries module resolution. */
 function findUnsupportedImportDiagnostics(source: string): OfficeCodeDiagnostic[] {
   const sourceFile = ts.createSourceFile(ENTRY_FILE, source, ts.ScriptTarget.Latest, true);
   const diagnostics: OfficeCodeDiagnostic[] = [];
 
+  /** Walks the generated source looking for import-like syntax. */
   function visit(node: ts.Node) {
     if (
       ts.isImportDeclaration(node) ||
@@ -115,6 +119,7 @@ function findUnsupportedImportDiagnostics(source: string): OfficeCodeDiagnostic[
   return diagnostics;
 }
 
+/** Converts a TypeScript diagnostic into Milton's tool-result diagnostic shape. */
 function toOfficeDiagnostic(diagnostic: ts.Diagnostic): OfficeCodeDiagnostic {
   return {
     severity: toSeverity(diagnostic.category),
@@ -124,6 +129,7 @@ function toOfficeDiagnostic(diagnostic: ts.Diagnostic): OfficeCodeDiagnostic {
   };
 }
 
+/** Converts a zero-based TypeScript source position into one-based line and column values. */
 function getLocation(sourceFile: ts.SourceFile, position: number): Pick<OfficeCodeDiagnostic, "line" | "column"> {
   const location = sourceFile.getLineAndCharacterOfPosition(position);
 
@@ -133,6 +139,7 @@ function getLocation(sourceFile: ts.SourceFile, position: number): Pick<OfficeCo
   };
 }
 
+/** Maps TypeScript diagnostic categories to serialized severities. */
 function toSeverity(category: ts.DiagnosticCategory): OfficeCodeDiagnostic["severity"] {
   switch (category) {
     case ts.DiagnosticCategory.Error:
@@ -201,90 +208,149 @@ const OFFICE_RUNTIME_DECLARATIONS = `
 type ExcelCellValue = string | number | boolean | null;
 type ExcelRangeValues = ExcelCellValue[][];
 
+/** Runtime context passed to generated Excel OfficeJS code. */
 interface ExcelRuntimeContext {
+  /** Raw Excel request context that owns all OfficeJS objects used during the run. */
   context: Excel.RequestContext;
+  /** Current workbook convenience alias from the active request context. */
   workbook: Excel.Workbook;
+  /** Synchronizes queued OfficeJS loads and mutations with Excel. */
   sync(): Promise<void>;
+  /** Captures structured execution logs for the tool result. */
   log(message: string, details?: unknown): void;
+  /** Optional cancellation signal provided by the agent runtime. */
   signal?: AbortSignal;
 }
 
 declare namespace Excel {
+  /** Runs a batch of OfficeJS commands against an Excel request context. */
   function run<T>(batch: (context: RequestContext) => Promise<T>): Promise<T>;
 
+  /** Request-scoped root object for Excel OfficeJS operations. */
   interface RequestContext {
+    /** Workbook associated with this request context. */
     workbook: Workbook;
+    /** Synchronizes queued OfficeJS loads and mutations with Excel. */
     sync(): Promise<void>;
   }
 
+  /** Excel workbook object exposed by OfficeJS. */
   interface Workbook {
+    /** Collection of worksheets in the workbook. */
     worksheets: WorksheetCollection;
+    /** Collection of workbook-level tables. */
     tables: TableCollection;
+    /** Application-level Excel operations. */
     application: Application;
   }
 
+  /** Excel application-level operations. */
   interface Application {
+    /** Recalculates workbook formulas using the requested calculation mode. */
     calculate(calculationType: CalculationType): void;
   }
 
   type CalculationType = "Recalculate" | "Full" | "FullRebuild";
 
+  /** Collection API for workbook worksheets. */
   interface WorksheetCollection {
+    /** Gets the currently active worksheet. */
     getActiveWorksheet(): Worksheet;
+    /** Gets a worksheet by name or id. */
     getItem(key: string): Worksheet;
+    /** Queues worksheet collection properties for loading. */
     load(propertyNames?: string | string[]): void;
   }
 
+  /** Excel worksheet object exposed by OfficeJS. */
   interface Worksheet {
+    /** Worksheet name. */
     name: string;
+    /** Tables contained in this worksheet. */
     tables: TableCollection;
+    /** Gets a range by address, or the full worksheet range when omitted. */
     getRange(address?: string): Range;
+    /** Gets the used range in the worksheet. */
     getUsedRange(valuesOnly?: boolean): Range;
+    /** Queues worksheet properties for loading. */
     load(propertyNames?: string | string[]): void;
   }
 
+  /** Excel range object exposed by OfficeJS. */
   interface Range {
+    /** Fully-qualified range address. */
     address: string;
+    /** Raw cell values in row-major order. */
     values: ExcelRangeValues;
+    /** Display text in row-major order. */
     text: string[][];
+    /** Formula values in row-major order. */
     formulas: ExcelRangeValues;
+    /** Number formats in row-major order. */
     numberFormat: string[][];
+    /** Number of rows in the range. */
     rowCount: number;
+    /** Number of columns in the range. */
     columnCount: number;
+    /** Formatting controls for the range. */
     format: RangeFormat;
+    /** Gets a cell within the range by zero-based row and column. */
     getCell(row: number, column: number): Range;
+    /** Gets a column within the range by zero-based index. */
     getColumn(column: number): Range;
+    /** Gets a row within the range by zero-based index. */
     getRow(row: number): Range;
+    /** Queues range properties for loading. */
     load(propertyNames?: string | string[]): void;
   }
 
+  /** Formatting controls for an Excel range. */
   interface RangeFormat {
+    /** Fill formatting controls. */
     fill: RangeFill;
+    /** Font formatting controls. */
     font: RangeFont;
+    /** Autofits range columns. */
     autofitColumns(): void;
+    /** Autofits range rows. */
     autofitRows(): void;
   }
 
+  /** Fill formatting controls for an Excel range. */
   interface RangeFill {
+    /** Fill color as an HTML color string. */
     color: string;
   }
 
+  /** Font formatting controls for an Excel range. */
   interface RangeFont {
+    /** Whether the font is bold. */
     bold: boolean;
+    /** Font color as an HTML color string. */
     color: string;
+    /** Whether the font is italic. */
     italic: boolean;
+    /** Font family name. */
     name: string;
+    /** Font size in points. */
     size: number;
   }
 
+  /** Collection API for Excel tables. */
   interface TableCollection {
+    /** Adds a table at an address or range. */
     add(address: string | Range, hasHeaders: boolean): Table;
+    /** Gets a table by name or id. */
     getItem(key: string): Table;
   }
 
+  /** Excel table object exposed by OfficeJS. */
   interface Table {
+    /** Table name. */
     name: string;
+    /** Gets the range occupied by the table. */
     getRange(): Range;
+    /** Queues table properties for loading. */
     load(propertyNames?: string | string[]): void;
   }
 }

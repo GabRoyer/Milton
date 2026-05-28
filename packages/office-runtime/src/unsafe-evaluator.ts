@@ -1,6 +1,8 @@
 import type { OfficeCodeRunFunction } from "./types";
 
+/** Evaluated module shape expected from generated Office code. */
 export interface OfficeCodeModule {
+  /** Entrypoint invoked with Milton's Excel runtime context. */
   run: OfficeCodeRunFunction;
 }
 
@@ -9,6 +11,7 @@ const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor as
   ...args: string[]
 ) => (...args: unknown[]) => Promise<void>;
 
+/** Evaluates compiler output and returns the generated Office code module. */
 export async function unsafeEvaluateOfficeCode(javascript: string): Promise<OfficeCodeModule> {
   const exports: Record<string, unknown> = {};
   const evaluator = new AsyncFunction(

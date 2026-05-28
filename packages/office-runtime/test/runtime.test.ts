@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { compileOfficeCode, executeOfficeCode, OfficeCodeExecutionError, unsafeEvaluateOfficeCode } from "../src";
 import type { ExcelRunner } from "../src";
 
+/** Minimal Excel.run adapter used by runtime tests. */
 const mockExcelRunner: ExcelRunner = async (callback) => {
   await callback({
     workbook: {},
