@@ -1,4 +1,4 @@
-import type { OfficeCodeCompileResult } from "./compiler";
+import type { OfficeCodeCompileResult } from "./index";
 
 /** Message sent to the compiler worker to compile one source string. */
 interface CompilerWorkerRequest {
@@ -114,7 +114,7 @@ function createDefaultCompilerWorker(): Worker {
     throw new Error("Office code compiler workers are not available in this runtime.");
   }
 
-  return new Worker(new URL("./compiler-worker.ts", import.meta.url), {
+  return new Worker(new URL("./worker.ts", import.meta.url), {
     type: "module",
   });
 }

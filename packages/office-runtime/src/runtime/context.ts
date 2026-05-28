@@ -22,12 +22,15 @@ export interface OfficeCodeLogEntry {
   timestamp: number;
 }
 
+/** Receives structured log entries emitted by generated Office code. */
+export type OfficeCodeLogCallback = (entry: OfficeCodeLogEntry) => void;
+
 /** Options used to build the generated-code runtime context. */
 export interface CreateExcelRuntimeContextOptions {
   /** Optional cancellation signal passed through to generated code. */
   signal?: AbortSignal;
-  /** Mutable log sink populated by ctx.log calls. */
-  logs?: OfficeCodeLogEntry[];
+  /** Optional callback invoked for each ctx.log call. */
+  onLog?: OfficeCodeLogCallback;
 }
 
 /** Creates the minimal Excel runtime context exposed to generated code. */
@@ -41,7 +44,7 @@ export function createExcelRuntimeContext(
     signal: options.signal,
     sync: () => context.sync(),
     log: (message, details) => {
-      options.logs?.push({
+      options.onLog?.({
         message,
         details,
         timestamp: Date.now(),

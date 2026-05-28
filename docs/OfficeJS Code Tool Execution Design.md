@@ -99,6 +99,23 @@ This package owns the browser-compatible code execution runtime:
   - createExecuteOfficeJsCodeTool(options)
 ```
 
+The package should keep implementation areas separated by ownership:
+
+```text
+packages/office-runtime/src/
+  compiler/
+    index.ts          # TypeScript virtual compiler host and compile result types
+    worker.ts         # web worker entrypoint
+    worker-client.ts  # lazy worker client and request tracking
+  runtime/
+    context.ts        # ExcelRuntimeContext and ctx construction
+  evaluation/
+    unsafe-evaluator.ts
+  execution/
+    execute.ts        # end-to-end compile/evaluate/Excel.run orchestration
+  index.ts            # public package export surface
+```
+
 `packages/office-host` should remain focused on typed Office host helpers. The runtime package can depend on it later, but the execution pipeline is a separate concern.
 
 The initial runtime flow:
@@ -204,7 +221,10 @@ The runtime executes user code inside:
 
 ```ts
 await Excel.run(async (context) => {
-  const runtimeContext = createExcelRuntimeContext(context, signal, log);
+  const runtimeContext = createExcelRuntimeContext(context, {
+    signal,
+    onLog: (entry) => logs.push(entry),
+  });
   result = await run(runtimeContext);
 });
 ```
@@ -232,6 +252,16 @@ main thread
 ```
 
 The worker should be lazy-loaded on the first `execute_officejs_code` call. That keeps the normal taskpane startup path from paying the TypeScript compiler cost before workbook automation is used.
+
+The default worker client should spawn the worker with the bundler-native module-worker pattern:
+
+```ts
+new Worker(new URL("./worker.ts", import.meta.url), {
+  type: "module",
+});
+```
+
+That lets Vite discover the worker entrypoint, build it as a separate chunk, and keep the TypeScript compiler plus raw `@types/office-js` declaration text out of the normal taskpane startup bundle. Non-browser tests can inject a compiler or fall back to a dynamic direct compiler import.
 
 The worker is a responsiveness boundary, not a security boundary. It does not replace sandboxing.
 
@@ -308,7 +338,7 @@ The evaluator should produce:
 Direct `eval`, `Function`, or `AsyncFunction` use should be isolated in one file, for example:
 
 ```text
-packages/office-runtime/src/unsafe-evaluator.ts
+packages/office-runtime/src/evaluation/unsafe-evaluator.ts
 ```
 
 That file should include a short comment naming the deferred sandboxing work.
@@ -411,6 +441,7 @@ PR scope:
 
 - Add `packages/office-runtime`.
 - Add TypeScript as a runtime dependency where the browser bundle can include it.
+- Organize implementation under `compiler/`, `runtime/`, `evaluation/`, and `execution/`.
 - Implement a lazy compiler worker client.
 - Implement `compileOfficeCode(source)` using a virtual TypeScript compiler host.
 - Include Milton runtime declarations and the installed `@types/office-js` declarations in the worker.

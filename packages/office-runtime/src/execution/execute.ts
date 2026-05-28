@@ -1,8 +1,8 @@
-import { createOfficeCodeCompilerWorkerClient } from "./compiler-worker-client";
-import { createExcelRuntimeContext } from "./runtime-context";
-import type { OfficeCodeCompileResult, OfficeCodeDiagnostic } from "./compiler";
-import type { OfficeCodeLogEntry } from "./runtime-context";
-import { unsafeEvaluateOfficeCode } from "./unsafe-evaluator";
+import { createOfficeCodeCompilerWorkerClient } from "../compiler/worker-client";
+import { createExcelRuntimeContext } from "../runtime/context";
+import type { OfficeCodeCompileResult, OfficeCodeDiagnostic } from "../compiler";
+import type { OfficeCodeLogEntry } from "../runtime/context";
+import { unsafeEvaluateOfficeCode } from "../evaluation/unsafe-evaluator";
 
 /** Host adapter for running callbacks inside Excel.run. */
 export type ExcelRunner = (callback: (context: Excel.RequestContext) => Promise<void>) => Promise<void>;
@@ -94,7 +94,7 @@ export async function executeOfficeCode(
     await (options.excelRunner ?? defaultExcelRunner)(async (context) => {
       const runtimeContext = createExcelRuntimeContext(context, {
         signal: options.signal,
-        logs,
+        onLog: (entry) => logs.push(entry),
       });
 
       throwIfAborted(options.signal);
@@ -134,7 +134,7 @@ let defaultCompilerClient: ReturnType<typeof createOfficeCodeCompilerWorkerClien
 /** Compiles with a lazy worker in browsers and falls back to direct compilation elsewhere. */
 async function compileOfficeCodeWithDefaultHost(source: string): Promise<OfficeCodeCompileResult> {
   if (typeof Worker === "undefined") {
-    const { compileOfficeCode } = await import("./compiler");
+    const { compileOfficeCode } = await import("../compiler");
     return compileOfficeCode(source);
   }
 

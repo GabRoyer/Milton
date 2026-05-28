@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { compileOfficeCode } from "../src/compiler";
-import { executeOfficeCode, OfficeCodeExecutionError, type ExcelRunner } from "../src/executor";
-import { unsafeEvaluateOfficeCode } from "../src/unsafe-evaluator";
+import { executeOfficeCode, OfficeCodeExecutionError, type ExcelRunner } from "../src/execution/execute";
+import { unsafeEvaluateOfficeCode } from "../src/evaluation/unsafe-evaluator";
 
 /** Minimal Excel.run adapter used by runtime tests. */
 const mockExcelRunner: ExcelRunner = async (callback) => {

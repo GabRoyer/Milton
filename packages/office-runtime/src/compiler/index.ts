@@ -1,5 +1,5 @@
 import ts from "typescript";
-import officeJsDeclarations from "../node_modules/@types/office-js/index.d.ts?raw";
+import officeJsDeclarations from "../../node_modules/@types/office-js/index.d.ts?raw";
 
 const ENTRY_FILE = "/entry.ts";
 const LIB_FILE = "/milton-lib.d.ts";
