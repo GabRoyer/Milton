@@ -91,7 +91,7 @@ export function compileOfficeCode(source: string): OfficeCodeCompileResult {
   };
 }
 
-/** Creates an in-memory TypeScript compiler host for generated Office code. */
+/** Creates a TypeScript compiler host backed by virtual source files. */
 function createCompilerHost(files: Map<string, string>, writeFile: ts.WriteFileCallback): ts.CompilerHost {
   return {
     getSourceFile(fileName, languageVersion) {
