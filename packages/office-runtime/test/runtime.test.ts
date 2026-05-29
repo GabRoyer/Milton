@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { compileOfficeCode } from "../src/compiler";
-import { executeOfficeCode, OfficeCodeExecutionError, type ExcelRunner } from "../src/execution/execute";
+import { compileOfficeCode } from "../src/compiler/compile";
+import { executeOfficeCode, OfficeCodeExecutionError, type ExcelRunner } from "../src/execution";
 import { unsafeEvaluateOfficeCode } from "../src/evaluation/unsafe-evaluator";
 
 /** Minimal Excel.run adapter used by runtime tests. */

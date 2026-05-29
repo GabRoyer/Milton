@@ -1,4 +1,4 @@
-import { compileOfficeCode } from "./index";
+import { compileOfficeCode } from "./compile";
 
 /** Message sent from the host thread to the compiler worker. */
 interface CompilerWorkerRequest {

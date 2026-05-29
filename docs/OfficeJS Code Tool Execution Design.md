@@ -103,16 +103,15 @@ The package should keep implementation areas separated by ownership:
 
 ```text
 packages/office-runtime/src/
+  execution.ts        # core compile/evaluate/Excel.run orchestration
   compiler/
-    index.ts          # TypeScript virtual compiler host and compile result types
+    compile.ts        # TypeScript virtual compiler host and compile result types
     worker.ts         # web worker entrypoint
     worker-client.ts  # lazy worker client and request tracking
   runtime/
     context.ts        # ExcelRuntimeContext and ctx construction
   evaluation/
     unsafe-evaluator.ts
-  execution/
-    execute.ts        # end-to-end compile/evaluate/Excel.run orchestration
   index.ts            # public package export surface
 ```
 
@@ -441,7 +440,7 @@ PR scope:
 
 - Add `packages/office-runtime`.
 - Add TypeScript as a runtime dependency where the browser bundle can include it.
-- Organize implementation under `compiler/`, `runtime/`, `evaluation/`, and `execution/`.
+- Keep `execution.ts` at the package root as the primary runtime entrypoint, with supporting implementation under `compiler/`, `runtime/`, and `evaluation/`.
 - Implement a lazy compiler worker client.
 - Implement `compileOfficeCode(source)` using a virtual TypeScript compiler host.
 - Include Milton runtime declarations and the installed `@types/office-js` declarations in the worker.
