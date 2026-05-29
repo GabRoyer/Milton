@@ -73,20 +73,15 @@ export function createExecuteOfficeJsCodeTool(
 
         return {
           content: [{ type: "text", text: result.content }],
-          details: withSubmittedCode(result.details, params.code),
+          details: {
+            ...result.details,
+            code: params.code,
+          },
         };
       } catch (error) {
         throw attachSubmittedCodeToError(error, params.code);
       }
     },
-  };
-}
-
-/** Adds submitted source to final tool details without coupling it to the core executor. */
-function withSubmittedCode(details: OfficeCodeExecutionDetails, code: string): ExecuteOfficeJsCodeToolFinalDetails {
-  return {
-    ...details,
-    code,
   };
 }
 
