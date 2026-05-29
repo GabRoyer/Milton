@@ -170,7 +170,7 @@ export async function run(ctx: ExcelRuntimeContext) {
   await ctx.sync();
 
   return {
-    summary: "Wrote A1.",
+    message: "Wrote A1.",
     address: "A1",
     value: "Hello from Milton",
   };
@@ -189,7 +189,7 @@ export async function run(ctx: ExcelRuntimeContext) {
   await ctx.sync();
 
   return {
-    summary: "Read A1:C10.",
+    message: "Read A1:C10.",
     address: range.address,
     values: range.values,
   };
@@ -357,13 +357,13 @@ interface OfficeCodeExecutionDetails {
 }
 ```
 
-On success, content should summarize:
+On success without returned data, content should summarize:
 
 ```text
 OfficeJS code executed successfully.
 ```
 
-If `run(ctx)` returns `{ summary: string }`, use that summary in the text result.
+If `run(ctx)` returns JSON-serializable data, include that JSON in the text result so the model can directly see workbook data returned by the script. The same JSON-compatible value should also be stored in `details.returnValue` for UI/debugging.
 
 On compile or runtime failure, throw from `execute()` and let the Pi agent loop convert it to an error tool result. The thrown message should be actionable:
 

@@ -21,6 +21,14 @@ export interface OfficeCodeExecutionDetails {
   elapsedMs: number;
 }
 
+/** JSON-safe data returned from generated Office code plus model-facing text. */
+interface SerializedReturnValue {
+  /** JSON-compatible value stored in tool execution details. */
+  value?: unknown;
+  /** Pretty-printed JSON sent back through the tool transcript. */
+  text?: string;
+}
+
 /** User/model-facing content plus structured execution metadata. */
 export interface OfficeCodeExecutionResult {
   /** Concise text result sent back through the tool transcript. */
@@ -102,17 +110,17 @@ export async function executeOfficeCode(
       throwIfAborted(options.signal);
     });
 
-    const jsonReturnValue = toJsonSerializable(returnValue);
+    const serializedReturnValue = serializeReturnValue(returnValue);
     const details: OfficeCodeExecutionDetails = {
       status: "success",
       diagnostics: compileResult.diagnostics,
       logs,
-      returnValue: jsonReturnValue,
+      returnValue: serializedReturnValue.value,
       elapsedMs: now() - startedAt,
     };
 
     return {
-      content: getSuccessContent(jsonReturnValue),
+      content: getSuccessContent(serializedReturnValue),
       details,
     };
   } catch (error) {
@@ -170,34 +178,33 @@ function throwIfAborted(signal: AbortSignal | undefined): void {
   }
 }
 
-/** Normalizes returned data to the JSON-compatible contract promised to the model. */
-function toJsonSerializable(value: unknown): unknown {
+/** Serializes returned data for the model transcript and structured details. */
+function serializeReturnValue(value: unknown): SerializedReturnValue {
   if (value === undefined) {
-    return undefined;
+    return {};
   }
 
   try {
-    return JSON.parse(JSON.stringify(value));
+    const text = JSON.stringify(value, null, 2);
+
+    if (text === undefined) {
+      throw new Error("run(ctx) returned a value that could not be JSON-serialized.");
+    }
+
+    return {
+      value: JSON.parse(text),
+      text,
+    };
   } catch {
     throw new Error("run(ctx) returned a value that could not be JSON-serialized.");
   }
 }
 
-/** Builds concise tool-result text from the generated code return value. */
-function getSuccessContent(returnValue: unknown): string {
-  if (isSummaryObject(returnValue)) {
-    return returnValue.summary;
+/** Builds model-facing tool-result text from execution status and returned data. */
+function getSuccessContent(serializedReturnValue: SerializedReturnValue): string {
+  if (!serializedReturnValue.text) {
+    return "OfficeJS code executed successfully.";
   }
 
-  return "OfficeJS code executed successfully.";
-}
-
-/** Checks whether a returned value includes a model-facing summary string. */
-function isSummaryObject(value: unknown): value is { summary: string } {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "summary" in value &&
-    typeof (value as { summary: unknown }).summary === "string"
-  );
+  return `OfficeJS code executed successfully.\n\nReturned data:\n${serializedReturnValue.text}`;
 }

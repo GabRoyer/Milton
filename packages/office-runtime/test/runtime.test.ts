@@ -20,7 +20,7 @@ export async function run(ctx: ExcelRuntimeContext) {
   range.load(["address", "values"]);
   await ctx.sync();
   return {
-    summary: "Read A1:C10.",
+    message: "Read A1:C10.",
     address: range.address,
     values: range.values,
   };
@@ -46,7 +46,7 @@ export async function run(ctx: ExcelRuntimeContext) {
     const result = compileOfficeCode(`
 import { something } from "somewhere";
 export async function run(ctx: ExcelRuntimeContext) {
-  return { summary: "unused", something };
+  return { message: "unused", something };
 }
 `);
 
@@ -65,7 +65,7 @@ describe("unsafeEvaluateOfficeCode", () => {
     const compiled = compileOfficeCode(`
 export async function run(ctx: ExcelRuntimeContext) {
   ctx.log("called");
-  return { summary: "Ran." };
+  return { message: "Ran." };
 }
 `);
 
@@ -82,7 +82,7 @@ describe("executeOfficeCode", () => {
 export async function run(ctx: ExcelRuntimeContext) {
   ctx.log("read range", { address: "A1" });
   return {
-    summary: "Read A1.",
+    message: "Read A1.",
     values: [[1]],
   };
 }
@@ -90,7 +90,17 @@ export async function run(ctx: ExcelRuntimeContext) {
       { excelRunner: mockExcelRunner },
     );
 
-    expect(result.content).toBe("Read A1.");
+    expect(result.content).toBe(`OfficeJS code executed successfully.
+
+Returned data:
+{
+  "message": "Read A1.",
+  "values": [
+    [
+      1
+    ]
+  ]
+}`);
     expect(result.details).toMatchObject({
       status: "success",
       diagnostics: [],
@@ -101,7 +111,7 @@ export async function run(ctx: ExcelRuntimeContext) {
         },
       ],
       returnValue: {
-        summary: "Read A1.",
+        message: "Read A1.",
         values: [[1]],
       },
     });
