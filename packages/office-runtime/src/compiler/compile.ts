@@ -1,5 +1,15 @@
+/**
+ * Vite supports `?raw` file imports at bundle time, while the package build runs
+ * plain `tsc --noEmit`. The local suppression below is limited to importing the
+ * installed OfficeJS declarations as text for the runtime compiler's virtual
+ * file system.
+ */
+
 import ts from "typescript";
-import officeJsDeclarations from "../../node_modules/@types/office-js/index.d.ts?raw";
+// @ts-expect-error Vite turns this raw declaration import into a string for the compiler worker bundle.
+import officeJsDeclarationsRaw from "../../node_modules/@types/office-js/index.d.ts?raw";
+
+const officeJsDeclarations: string = officeJsDeclarationsRaw;
 
 const ENTRY_FILE = "/entry.ts";
 const LIB_FILE = "/milton-lib.d.ts";
