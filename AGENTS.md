@@ -61,6 +61,7 @@ Next PR: <link or pending>
 - Include focused validation in each phase.
 - Keep generated local development files out of source control.
 - If a phase needs follow-up work, record it in the design doc or PR description before moving on.
+- When modifying a vendored or upstream-sourced package, update that package's upstream-diff documentation in the same PR so local deviations remain auditable.
 
 ## Code Quality
 
