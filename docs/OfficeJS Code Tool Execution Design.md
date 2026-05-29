@@ -106,6 +106,7 @@ packages/office-runtime/src/
   execution.ts        # core compile/evaluate/Excel.run orchestration
   compiler/
     compile.ts        # TypeScript virtual compiler host and compile result types
+    built-in-types/   # raw-imported declarations injected into generated code typechecking
     worker.ts         # web worker entrypoint
     worker-client.ts  # lazy worker client and request tracking
   runtime/
@@ -296,7 +297,7 @@ The virtual compiler host should provide at least:
 - the generated source as an in-memory entry file,
 - `ExcelRuntimeContext` declarations,
 - the installed `@types/office-js` declaration file instead of a hand-maintained Excel API subset,
-- standard `ES2020` and DOM library declarations,
+- minimal built-in standard declarations kept as raw-imported files,
 - a no-op module resolver that rejects model-authored imports.
 
 Typechecking is worth including in the milestone because it gives the model actionable feedback about nonexistent OfficeJS APIs, wrong property names, and mismatched value shapes before any workbook mutation runs.

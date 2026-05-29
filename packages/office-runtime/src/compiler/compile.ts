@@ -1,4 +1,6 @@
 import ts from "typescript";
+import miltonRuntimeDeclarations from "./built-in-types/milton-runtime.d.ts?raw";
+import standardDeclarations from "./built-in-types/standard.d.ts?raw";
 import officeJsDeclarations from "../../node_modules/@types/office-js/index.d.ts?raw";
 
 const ENTRY_FILE = "/entry.ts";
@@ -54,8 +56,8 @@ export function compileOfficeCode(source: string): OfficeCodeCompileResult {
 
   const files = new Map<string, string>([
     [ENTRY_FILE, source],
-    [LIB_FILE, STANDARD_DECLARATIONS],
-    [RUNTIME_FILE, MILTON_RUNTIME_DECLARATIONS],
+    [LIB_FILE, standardDeclarations],
+    [RUNTIME_FILE, miltonRuntimeDeclarations],
     [OFFICE_JS_FILE, officeJsDeclarations],
   ]);
   let javascript = "";
@@ -179,70 +181,3 @@ function toSeverity(category: ts.DiagnosticCategory): OfficeCodeDiagnostic["seve
       return "message";
   }
 }
-
-const STANDARD_DECLARATIONS = `
-interface Array<T> {
-  readonly length: number;
-  [n: number]: T;
-  push(...items: T[]): number;
-  map<U>(callbackfn: (value: T, index: number, array: T[]) => U): U[];
-  filter(callbackfn: (value: T, index: number, array: T[]) => unknown): T[];
-  forEach(callbackfn: (value: T, index: number, array: T[]) => void): void;
-}
-interface ReadonlyArray<T> {
-  readonly length: number;
-  readonly [n: number]: T;
-}
-interface Boolean {}
-interface CallableFunction extends Function {}
-interface Function {}
-interface IArguments {}
-interface NewableFunction extends Function {}
-interface Number {}
-interface Object {}
-interface RegExp {}
-interface String {}
-interface Error {
-  message: string;
-}
-interface ErrorConstructor {
-  new (message?: string): Error;
-}
-declare var Error: ErrorConstructor;
-interface PromiseLike<T> {
-  then<TResult1 = T, TResult2 = never>(
-    onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | null,
-    onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | null
-  ): PromiseLike<TResult1 | TResult2>;
-}
-interface Promise<T> extends PromiseLike<T> {
-  catch<TResult = never>(
-    onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | null
-  ): Promise<T | TResult>;
-}
-interface PromiseConstructor {
-  resolve<T>(value: T | PromiseLike<T>): Promise<T>;
-  reject<T = never>(reason?: any): Promise<T>;
-}
-declare var Promise: PromiseConstructor;
-interface AbortSignal {
-  readonly aborted: boolean;
-  readonly reason?: unknown;
-}
-`;
-
-const MILTON_RUNTIME_DECLARATIONS = `
-/** Runtime context passed to generated Excel OfficeJS code. */
-interface ExcelRuntimeContext {
-  /** Raw Excel request context that owns all OfficeJS objects used during the run. */
-  context: Excel.RequestContext;
-  /** Current workbook convenience alias from the active request context. */
-  workbook: Excel.Workbook;
-  /** Synchronizes queued OfficeJS loads and mutations with Excel. */
-  sync(): Promise<void>;
-  /** Captures structured execution logs for the tool result. */
-  log(message: string, details?: unknown): void;
-  /** Optional cancellation signal provided by the agent runtime. */
-  signal?: AbortSignal;
-}
-`;

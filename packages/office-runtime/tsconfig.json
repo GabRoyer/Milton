@@ -11,5 +11,6 @@
     "noEmit": true,
     "types": ["office-js"]
   },
-  "include": ["src", "test"]
+  "include": ["src", "test"],
+  "exclude": ["src/compiler/built-in-types"]
 }
