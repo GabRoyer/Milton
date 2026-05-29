@@ -26,6 +26,7 @@ const compilerOptions: ts.CompilerOptions = {
   jsx: ts.JsxEmit.None,
   noEmitOnError: true,
   strict: true,
+  noImplicitAny: false,
   skipLibCheck: true,
   lib: [TYPESCRIPT_LIB_FILE],
 };

@@ -48,6 +48,25 @@ export async function run(_ctx: ExcelRuntimeContext) {
     expect(result.javascript).toContain("exports.run = run");
   });
 
+  it("allows implicit any in generated helper parameters", () => {
+    const result = compileOfficeCode(`
+export async function run(ctx: ExcelRuntimeContext) {
+  function summarize(value) {
+    return String(value);
+  }
+
+  const sheet = ctx.workbook.worksheets.getActiveWorksheet();
+  return {
+    message: summarize("Read active worksheet."),
+    sheet,
+  };
+}
+`);
+
+    expect(result.diagnostics).toEqual([]);
+    expect(result.javascript).toContain("exports.run = run");
+  });
+
   it("returns semantic diagnostics for nonexistent OfficeJS APIs", () => {
     const result = compileOfficeCode(`
 export async function run(ctx: ExcelRuntimeContext) {

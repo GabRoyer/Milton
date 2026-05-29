@@ -290,9 +290,15 @@ Recommended initial compiler options:
   jsx: ts.JsxEmit.None,
   noEmitOnError: true,
   strict: true,
+  noImplicitAny: false,
   skipLibCheck: true,
 }
 ```
+
+`noImplicitAny` should be disabled for generated workbook code because models
+often omit helper parameter annotations. This keeps the tool focused on
+actionable OfficeJS and runtime-shape diagnostics without rejecting otherwise
+valid generated code solely for missing annotations.
 
 The virtual compiler host should provide at least:
 
