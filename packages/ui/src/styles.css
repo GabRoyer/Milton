@@ -119,6 +119,14 @@ h1 {
   justify-self: start;
 }
 
+.message-tool {
+  width: min(100%, 680px);
+  max-width: 94%;
+  justify-self: start;
+  border-color: #d7c9a9;
+  background: #fffdf7;
+}
+
 .message-meta {
   display: flex;
   min-height: 16px;
@@ -137,6 +145,45 @@ h1 {
   line-height: 1.45;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
+}
+
+.tool-details {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.tool-details details {
+  border-top: 1px solid #eadfca;
+  padding-top: 8px;
+}
+
+.tool-details summary {
+  color: #52606f;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.tool-details pre {
+  max-height: 220px;
+  overflow: auto;
+  margin: 8px 0 0;
+  border: 1px solid #e1d5bd;
+  border-radius: 6px;
+  padding: 8px;
+  background: #ffffff;
+  color: #263448;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", monospace;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  white-space: pre;
+}
+
+.tool-elapsed {
+  color: #647280;
+  font-size: 0.75rem;
+  line-height: 1.3;
 }
 
 .composer {

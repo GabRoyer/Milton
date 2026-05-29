@@ -11,6 +11,8 @@ export type ExcelRunner = (callback: (context: Excel.RequestContext) => Promise<
 export interface OfficeCodeExecutionDetails {
   /** Final execution status. */
   status: "success" | "error";
+  /** TypeScript source that was compiled and executed. */
+  code: string;
   /** Compile diagnostics associated with the run. */
   diagnostics: OfficeCodeDiagnostic[];
   /** Logs emitted by generated code. */
@@ -47,6 +49,8 @@ export interface ExecuteOfficeCodeOptions {
   excelRunner?: ExcelRunner;
   /** Optional cancellation signal checked around cooperative execution boundaries. */
   signal?: AbortSignal;
+  /** Optional callback invoked whenever generated code emits a log entry. */
+  onLog?: (entry: OfficeCodeLogEntry) => void;
   /** Optional clock override used for deterministic elapsed-time tests. */
   now?: () => number;
 }
@@ -84,8 +88,9 @@ export async function executeOfficeCode(
     const errorDiagnostics = compileResult.diagnostics.filter((diagnostic) => diagnostic.severity === "error");
 
     if (errorDiagnostics.length > 0) {
-      throw new OfficeCodeExecutionError(formatCompileError(errorDiagnostics[0]), {
+      throw new OfficeCodeExecutionError(formatCompileErrors(errorDiagnostics), {
         status: "error",
+        code: source,
         diagnostics: compileResult.diagnostics,
         logs,
         elapsedMs: now() - startedAt,
@@ -102,7 +107,10 @@ export async function executeOfficeCode(
     await (options.excelRunner ?? defaultExcelRunner)(async (context) => {
       const runtimeContext = createExcelRuntimeContext(context, {
         signal: options.signal,
-        onLog: (entry) => logs.push(entry),
+        onLog: (entry) => {
+          logs.push(entry);
+          options.onLog?.(entry);
+        },
       });
 
       throwIfAborted(options.signal);
@@ -113,6 +121,7 @@ export async function executeOfficeCode(
     const serializedReturnValue = serializeReturnValue(returnValue);
     const details: OfficeCodeExecutionDetails = {
       status: "success",
+      code: source,
       diagnostics: compileResult.diagnostics,
       logs,
       returnValue: serializedReturnValue.value,
@@ -130,6 +139,7 @@ export async function executeOfficeCode(
 
     throw new OfficeCodeExecutionError(error instanceof Error ? error.message : String(error), {
       status: "error",
+      code: source,
       diagnostics,
       logs,
       elapsedMs: now() - startedAt,
@@ -160,14 +170,20 @@ async function defaultExcelRunner(callback: Parameters<ExcelRunner>[0]): Promise
   await excel.run(callback);
 }
 
-/** Formats the first TypeScript diagnostic as a concise tool error. */
-function formatCompileError(diagnostic: OfficeCodeExecutionDetails["diagnostics"][number]): string {
+/** Formats TypeScript error diagnostics as concise model-facing text. */
+function formatCompileErrors(diagnostics: OfficeCodeDiagnostic[]): string {
+  return `TypeScript compilation failed:\n${diagnostics.map(formatCompileDiagnostic).join("\n")}`;
+}
+
+/** Formats one TypeScript diagnostic with source location and diagnostic code. */
+function formatCompileDiagnostic(diagnostic: OfficeCodeDiagnostic): string {
   const location =
     diagnostic.line !== undefined && diagnostic.column !== undefined
       ? `Line ${diagnostic.line}, Column ${diagnostic.column}: `
       : "";
+  const code = diagnostic.code === undefined ? "" : ` [${diagnostic.code}]`;
 
-  return `TypeScript compilation failed: ${location}${diagnostic.message}`;
+  return `${location}${diagnostic.message}${code}`;
 }
 
 /** Throws when the cooperative execution signal has already been aborted. */

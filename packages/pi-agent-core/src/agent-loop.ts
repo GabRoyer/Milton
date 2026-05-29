@@ -658,7 +658,7 @@ async function executePreparedToolCall(
 	} catch (error) {
 		await Promise.all(updateEvents);
 		return {
-			result: createErrorToolResult(error instanceof Error ? error.message : String(error)),
+			result: createErrorToolResult(error instanceof Error ? error.message : String(error), getErrorDetails(error)),
 			isError: true,
 		};
 	}
@@ -697,7 +697,7 @@ async function finalizeExecutedToolCall(
 				isError = afterResult.isError ?? isError;
 			}
 		} catch (error) {
-			result = createErrorToolResult(error instanceof Error ? error.message : String(error));
+			result = createErrorToolResult(error instanceof Error ? error.message : String(error), getErrorDetails(error));
 			isError = true;
 		}
 	}
@@ -709,11 +709,26 @@ async function finalizeExecutedToolCall(
 	};
 }
 
-function createErrorToolResult(message: string): AgentToolResult<any> {
+/** Builds the standardized error result shape used for failed tool execution. */
+function createErrorToolResult(message: string, details: unknown = {}): AgentToolResult<any> {
 	return {
 		content: [{ type: "text", text: message }],
-		details: {},
+		details,
 	};
+}
+
+/** Extracts structured tool error details carried by thrown errors. */
+function getErrorDetails(error: unknown): unknown {
+	if (
+		typeof error === "object" &&
+		error !== null &&
+		"details" in error &&
+		(error as { details?: unknown }).details !== undefined
+	) {
+		return (error as { details: unknown }).details;
+	}
+
+	return {};
 }
 
 async function emitToolExecutionEnd(finalized: FinalizedToolCallOutcome, emit: AgentEventSink): Promise<void> {

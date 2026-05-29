@@ -6,11 +6,16 @@ import type { AssistantMessage, Message, Model, TextContent, ToolCall, UserMessa
 import { createExecuteOfficeJsCodeTool, EXECUTE_OFFICEJS_CODE_TOOL_NAME } from "@milton/office-runtime/tool";
 
 export interface ExcelTaskpaneAppProps {
+  /** OpenAI credentials and model selection used by the taskpane agent loop. */
   openAI: {
+    /** API key used for taskpane-local model requests. */
     apiKey: string;
+    /** OpenAI model id selected for Milton. */
     model: string;
   };
+  /** Optional development profile label displayed in debug builds. */
   devProfile?: {
+    /** Human-readable profile name for the active taskpane configuration. */
     label: string;
   };
 }
@@ -29,11 +34,55 @@ const MILTON_SYSTEM_PROMPT = [
 type TaskpaneMessageStatus = "complete" | "streaming" | "error" | "cancelled";
 
 interface TaskpaneMessage {
+  /** Stable UI message id. */
   id: string;
-  role: "user" | "assistant";
+  /** Message author or tool source. */
+  role: "user" | "assistant" | "tool";
+  /** Primary visible message text. */
   content: string;
+  /** ISO timestamp shown for ordering and reset stability. */
   createdAt: string;
+  /** Current lifecycle status for the message. */
   status: TaskpaneMessageStatus;
+  /** Optional workbook tool debug details. */
+  toolDetails?: TaskpaneToolDetails;
+}
+
+interface TaskpaneToolDetails {
+  /** Tool display name. */
+  toolName: string;
+  /** TypeScript source sent to the OfficeJS code tool. */
+  code?: string;
+  /** Logs emitted by generated code. */
+  logs: TaskpaneToolLog[];
+  /** Compile diagnostics returned by the OfficeJS compiler. */
+  diagnostics: TaskpaneDiagnostic[];
+  /** JSON-compatible value returned by generated code. */
+  returnValue?: unknown;
+  /** Elapsed execution time in milliseconds. */
+  elapsedMs?: number;
+}
+
+interface TaskpaneToolLog {
+  /** Log message emitted from generated code. */
+  message: string;
+  /** Optional structured log details. */
+  details?: unknown;
+  /** Unix timestamp recorded by the runtime. */
+  timestamp?: number;
+}
+
+interface TaskpaneDiagnostic {
+  /** Diagnostic severity label. */
+  severity: string;
+  /** Diagnostic message text. */
+  message: string;
+  /** One-based source line when available. */
+  line?: number;
+  /** One-based source column when available. */
+  column?: number;
+  /** TypeScript or Milton-specific diagnostic code. */
+  code?: number | string;
 }
 
 const INITIAL_MESSAGES: TaskpaneMessage[] = [
@@ -46,6 +95,7 @@ const INITIAL_MESSAGES: TaskpaneMessage[] = [
   },
 ];
 
+/** Renders the Excel taskpane chat surface and wires Milton to workbook tools. */
 export function ExcelTaskpaneApp({ devProfile, openAI }: ExcelTaskpaneAppProps) {
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState<TaskpaneMessage[]>(INITIAL_MESSAGES);
@@ -54,23 +104,33 @@ export function ExcelTaskpaneApp({ devProfile, openAI }: ExcelTaskpaneAppProps) 
   const abortControllerRef = useRef<AbortController | null>(null);
   const messagesRef = useRef(messages);
   const piMessagesRef = useRef<PiAgentMessage[]>([]);
+  const toolMessageIdsRef = useRef(new Map<string, string>());
   const isConfigured = openAI.apiKey.trim().length > 0;
   const model = useMemo(() => resolveOpenAIResponsesModel(openAI.model), [openAI.model]);
   const tools = useMemo(() => [createExecuteOfficeJsCodeTool()], []);
 
+  /** Replaces taskpane messages while keeping the mutable event-handler ref in sync. */
   function updateMessages(nextMessages: TaskpaneMessage[]) {
     messagesRef.current = nextMessages;
     setMessages(nextMessages);
   }
 
+  /** Appends one taskpane message. */
   function appendMessage(message: TaskpaneMessage) {
     updateMessages([...messagesRef.current, message]);
   }
 
+  /** Applies a shallow patch to one taskpane message. */
   function updateMessage(id: string, patch: Partial<TaskpaneMessage>) {
     updateMessages(messagesRef.current.map((message) => (message.id === id ? { ...message, ...patch } : message)));
   }
 
+  /** Updates one taskpane message with access to its existing value. */
+  function updateMessageWith(id: string, updater: (message: TaskpaneMessage) => TaskpaneMessage) {
+    updateMessages(messagesRef.current.map((message) => (message.id === id ? updater(message) : message)));
+  }
+
+  /** Sends the current user prompt through the Pi agent loop. */
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -113,11 +173,43 @@ export function ExcelTaskpaneApp({ devProfile, openAI }: ExcelTaskpaneAppProps) 
         },
         (agentEvent) => {
           if (agentEvent.type === "tool_execution_start") {
+            const toolMessageId = createTaskpaneMessageId("tool");
+            toolMessageIdsRef.current.set(agentEvent.toolCallId, toolMessageId);
+            appendMessage({
+              id: toolMessageId,
+              role: "tool",
+              content: getToolExecutionStartText(agentEvent.toolName),
+              createdAt: new Date().toISOString(),
+              status: "streaming",
+              toolDetails: {
+                toolName: agentEvent.toolName,
+                code: getToolCode(agentEvent.args),
+                logs: [],
+                diagnostics: [],
+              },
+            });
             setStatus(getToolExecutionStartText(agentEvent.toolName));
             return;
           }
 
+          if (agentEvent.type === "tool_execution_update") {
+            const toolMessageId = toolMessageIdsRef.current.get(agentEvent.toolCallId);
+
+            if (toolMessageId) {
+              appendToolUpdate(toolMessageId, agentEvent.partialResult);
+            }
+
+            return;
+          }
+
           if (agentEvent.type === "tool_execution_end") {
+            const toolMessageId = toolMessageIdsRef.current.get(agentEvent.toolCallId);
+
+            if (toolMessageId) {
+              updateToolMessageFromResult(toolMessageId, agentEvent.toolName, agentEvent.result, agentEvent.isError);
+            }
+
+            toolMessageIdsRef.current.delete(agentEvent.toolCallId);
             setStatus(agentEvent.isError ? getToolExecutionErrorText(agentEvent.result) : null);
             return;
           }
@@ -193,10 +285,61 @@ export function ExcelTaskpaneApp({ devProfile, openAI }: ExcelTaskpaneAppProps) 
     }
   }
 
+  /** Appends a streamed OfficeJS log update to an existing tool message. */
+  function appendToolUpdate(messageId: string, partialResult: unknown) {
+    const latestLog = getLatestToolLog(partialResult);
+
+    if (!latestLog) {
+      return;
+    }
+
+    updateMessageWith(messageId, (message) => {
+      const previousDetails = message.toolDetails ?? createEmptyToolDetails("execute_officejs_code");
+
+      return {
+        ...message,
+        content: `OfficeJS log: ${latestLog.message}`,
+        toolDetails: {
+          ...previousDetails,
+          code: previousDetails.code ?? getToolCodeFromPartial(partialResult),
+          logs: previousDetails.logs.concat(latestLog),
+        },
+      };
+    });
+  }
+
+  /** Updates a tool message with final execution details. */
+  function updateToolMessageFromResult(messageId: string, toolName: string, result: unknown, isError: boolean) {
+    const executionDetails = getExecutionDetails(result);
+
+    updateMessageWith(messageId, (message) => {
+      const previousDetails = message.toolDetails ?? createEmptyToolDetails(toolName);
+      const nextDetails = executionDetails
+        ? {
+            ...previousDetails,
+            code: executionDetails.code ?? previousDetails.code,
+            logs: executionDetails.logs ?? previousDetails.logs,
+            diagnostics: executionDetails.diagnostics ?? previousDetails.diagnostics,
+            returnValue: executionDetails.returnValue,
+            elapsedMs: executionDetails.elapsedMs,
+          }
+        : previousDetails;
+
+      return {
+        ...message,
+        content: isError ? getToolExecutionErrorText(result) : getToolExecutionSuccessText(nextDetails),
+        status: isError ? "error" : "complete",
+        toolDetails: nextDetails,
+      };
+    });
+  }
+
+  /** Cancels the active taskpane agent run. */
   function handleCancel() {
     abortControllerRef.current?.abort();
   }
 
+  /** Clears taskpane transcript state and cancels active work if needed. */
   function handleReset() {
     if (isRunning) {
       abortControllerRef.current?.abort();
@@ -204,10 +347,12 @@ export function ExcelTaskpaneApp({ devProfile, openAI }: ExcelTaskpaneAppProps) 
 
     updateMessages(INITIAL_MESSAGES);
     piMessagesRef.current = [];
+    toolMessageIdsRef.current.clear();
     setDraft("");
     setStatus(null);
   }
 
+  /** Submits the composer on Enter while preserving Shift+Enter newlines. */
   function handleComposerKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
@@ -235,12 +380,13 @@ export function ExcelTaskpaneApp({ devProfile, openAI }: ExcelTaskpaneAppProps) 
         {messages.map((message) => (
           <article className={`message message-${message.role}`} key={message.id}>
             <div className="message-meta">
-              <span>{message.role === "assistant" ? "Milton" : "You"}</span>
+              <span>{getMessageRoleLabel(message.role)}</span>
               {message.status === "streaming" ? <span>Thinking</span> : null}
               {message.status === "error" ? <span>Error</span> : null}
               {message.status === "cancelled" ? <span>Cancelled</span> : null}
             </div>
             <p>{message.content || " "}</p>
+            {message.toolDetails ? <ToolDetailsView details={message.toolDetails} /> : null}
           </article>
         ))}
       </section>
@@ -272,14 +418,76 @@ export function ExcelTaskpaneApp({ devProfile, openAI }: ExcelTaskpaneAppProps) 
   );
 }
 
+/** Renders expandable OfficeJS tool execution details. */
+function ToolDetailsView({ details }: { details: TaskpaneToolDetails }) {
+  const logsText = details.logs.length > 0 ? formatJson(details.logs) : "";
+  const diagnosticsText = details.diagnostics.length > 0 ? formatJson(details.diagnostics) : "";
+  const returnValueText = details.returnValue === undefined ? "" : formatJson(details.returnValue);
+
+  return (
+    <div className="tool-details">
+      {details.elapsedMs !== undefined ? <p className="tool-elapsed">{Math.round(details.elapsedMs)} ms</p> : null}
+      {details.code ? (
+        <details>
+          <summary>Code</summary>
+          <pre>{details.code}</pre>
+        </details>
+      ) : null}
+      {logsText ? (
+        <details>
+          <summary>Logs</summary>
+          <pre>{logsText}</pre>
+        </details>
+      ) : null}
+      {diagnosticsText ? (
+        <details>
+          <summary>Diagnostics</summary>
+          <pre>{diagnosticsText}</pre>
+        </details>
+      ) : null}
+      {returnValueText ? (
+        <details>
+          <summary>Returned data</summary>
+          <pre>{returnValueText}</pre>
+        </details>
+      ) : null}
+    </div>
+  );
+}
+
+/** Builds an empty tool details object for streamed updates. */
+function createEmptyToolDetails(toolName: string): TaskpaneToolDetails {
+  return {
+    toolName,
+    logs: [],
+    diagnostics: [],
+  };
+}
+
+/** Creates a taskpane message id with a role prefix for easier debugging. */
 function createTaskpaneMessageId(role: TaskpaneMessage["role"]): string {
   return `${role}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
+/** Returns the visible label for a taskpane message role. */
+function getMessageRoleLabel(role: TaskpaneMessage["role"]): string {
+  if (role === "assistant") {
+    return "Milton";
+  }
+
+  if (role === "tool") {
+    return "Workbook Tool";
+  }
+
+  return "You";
+}
+
+/** Keeps only Pi messages that the configured model provider accepts. */
 function isLlmMessage(message: PiAgentMessage): message is Message {
   return message.role === "user" || message.role === "assistant" || message.role === "toolResult";
 }
 
+/** Maps assistant stop reasons to taskpane message status values. */
 function getAssistantStatus(message: AssistantMessage): TaskpaneMessageStatus {
   if (message.stopReason === "aborted") {
     return "cancelled";
@@ -292,6 +500,7 @@ function getAssistantStatus(message: AssistantMessage): TaskpaneMessageStatus {
   return "complete";
 }
 
+/** Extracts visible text from Pi agent messages for the taskpane transcript. */
 function getMessageText(message: PiAgentMessage): string {
   if (message.role === "user") {
     if (typeof message.content === "string") {
@@ -355,6 +564,19 @@ function getToolExecutionStartText(toolName: string): string {
   return `Running ${toolName}.`;
 }
 
+/** Builds taskpane text for a completed workbook tool result. */
+function getToolExecutionSuccessText(details: TaskpaneToolDetails): string {
+  if (details.returnValue !== undefined) {
+    return "OfficeJS workbook code finished with returned data.";
+  }
+
+  if (details.logs.length > 0) {
+    return "OfficeJS workbook code finished with logs.";
+  }
+
+  return "OfficeJS workbook code finished.";
+}
+
 /** Extracts readable taskpane status text from an errored tool result. */
 function getToolExecutionErrorText(result: unknown): string {
   const content = (result as { content?: Array<{ text?: unknown; type?: unknown }> }).content;
@@ -368,6 +590,114 @@ function getToolExecutionErrorText(result: unknown): string {
   return text || "OfficeJS workbook code failed.";
 }
 
+/** Extracts the code argument from a tool start event payload. */
+function getToolCode(args: unknown): string | undefined {
+  const record = asRecord(args);
+  return typeof record?.code === "string" ? record.code : undefined;
+}
+
+/** Extracts streamed code from a partial tool result. */
+function getToolCodeFromPartial(partialResult: unknown): string | undefined {
+  const details = asRecord(asRecord(partialResult)?.details);
+  return typeof details?.code === "string" ? details.code : undefined;
+}
+
+/** Extracts a streamed OfficeJS log entry from a partial tool result. */
+function getLatestToolLog(partialResult: unknown): TaskpaneToolLog | undefined {
+  const details = asRecord(asRecord(partialResult)?.details);
+  const latestLog = asRecord(details?.latestLog);
+
+  if (typeof latestLog?.message !== "string") {
+    return undefined;
+  }
+
+  return {
+    message: latestLog.message,
+    details: latestLog.details,
+    timestamp: typeof latestLog.timestamp === "number" ? latestLog.timestamp : undefined,
+  };
+}
+
+/** Extracts final OfficeJS execution details from a tool result payload. */
+function getExecutionDetails(result: unknown): Partial<TaskpaneToolDetails> | undefined {
+  const details = asRecord(asRecord(result)?.details);
+
+  if (!details) {
+    return undefined;
+  }
+
+  return {
+    code: typeof details.code === "string" ? details.code : undefined,
+    logs: parseToolLogs(details.logs),
+    diagnostics: parseDiagnostics(details.diagnostics),
+    returnValue: details.returnValue,
+    elapsedMs: typeof details.elapsedMs === "number" ? details.elapsedMs : undefined,
+  };
+}
+
+/** Converts an unknown logs payload into taskpane log entries. */
+function parseToolLogs(value: unknown): TaskpaneToolLog[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  return value.flatMap((entry) => {
+    const record = asRecord(entry);
+
+    if (typeof record?.message !== "string") {
+      return [];
+    }
+
+    return [
+      {
+        message: record.message,
+        details: record.details,
+        timestamp: typeof record.timestamp === "number" ? record.timestamp : undefined,
+      },
+    ];
+  });
+}
+
+/** Converts an unknown diagnostics payload into taskpane diagnostics. */
+function parseDiagnostics(value: unknown): TaskpaneDiagnostic[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  return value.flatMap((entry) => {
+    const record = asRecord(entry);
+
+    if (typeof record?.message !== "string" || typeof record.severity !== "string") {
+      return [];
+    }
+
+    return [
+      {
+        severity: record.severity,
+        message: record.message,
+        line: typeof record.line === "number" ? record.line : undefined,
+        column: typeof record.column === "number" ? record.column : undefined,
+        code: typeof record.code === "number" || typeof record.code === "string" ? record.code : undefined,
+      },
+    ];
+  });
+}
+
+/** Safely formats JSON-compatible values for taskpane detail panels. */
+function formatJson(value: unknown): string {
+  try {
+    return JSON.stringify(value, null, 2) ?? "";
+  } catch {
+    return String(value);
+  }
+}
+
+/** Narrows unknown values to records for payload extraction. */
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : undefined;
+}
+
+/** Resolves a configured model id into the Pi OpenAI Responses model shape. */
 function resolveOpenAIResponsesModel(modelId: string): Model<"openai-responses"> {
   const registryModel = getModels("openai").find((candidate) => candidate.id === modelId);
 
