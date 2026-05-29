@@ -54,7 +54,7 @@ export function createOfficeCodeCompilerWorkerClient(
   options: CreateOfficeCodeCompilerWorkerClientOptions = {},
 ): OfficeCodeCompilerWorkerClient {
   const worker = options.worker ?? options.createWorker?.() ?? createDefaultCompilerWorker();
-  const pending = new Map<number, PendingCompile>();
+  const pending = new Map<number, PendingCompileRequest>();
   let nextId = 1;
 
   worker.addEventListener("message", (event: MessageEvent<CompilerWorkerResponse>) => {
@@ -120,7 +120,7 @@ function createDefaultCompilerWorker(): Worker {
 }
 
 /** Pending compile request callbacks stored until the worker responds. */
-interface PendingCompile {
+interface PendingCompileRequest {
   /** Resolves the compile promise with a worker result. */
   resolve: (result: OfficeCodeCompileResult) => void;
   /** Rejects the compile promise when worker execution fails. */
