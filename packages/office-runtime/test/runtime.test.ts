@@ -152,6 +152,7 @@ Returned data:
         values: [[1]],
       },
     });
+    expect(result.details).not.toHaveProperty("code");
   });
 
   it("throws a clear error when run is missing", async () => {
@@ -186,11 +187,11 @@ export async function run(ctx: ExcelRuntimeContext) {
         message: expect.stringContaining("Line "),
         details: {
           status: "error",
-          code: expect.stringContaining("notARealApi"),
         },
       });
       expect((error as OfficeCodeExecutionError).message).toContain("Column ");
       expect((error as OfficeCodeExecutionError).message).toMatch(/\[\d+\]/);
+      expect((error as OfficeCodeExecutionError).details).not.toHaveProperty("code");
       expect((error as OfficeCodeExecutionError).details.diagnostics).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
@@ -292,5 +293,28 @@ export async function run(ctx: ExcelRuntimeContext) {
         },
       },
     ]);
+  });
+
+  it("adds submitted code to thrown tool error details", async () => {
+    const tool = createExecuteOfficeJsCodeTool({
+      compile: compileOfficeCode,
+      excelRunner: mockExcelRunner,
+    });
+    const source = `
+export async function run(ctx: ExcelRuntimeContext) {
+  ctx.workbook.worksheets.notARealApi();
+}
+`;
+
+    await expect(
+      tool.execute("tool-call-1", {
+        code: source,
+      }),
+    ).rejects.toMatchObject({
+      details: {
+        status: "error",
+        code: source,
+      },
+    });
   });
 });

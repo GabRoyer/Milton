@@ -12,6 +12,7 @@ export type { ExcelRunner, ExecuteOfficeCodeOptions, OfficeCodeExecutionDetails,
 export type {
   CreateExecuteOfficeJsCodeToolOptions,
   ExecuteOfficeJsCodeToolDetails,
+  ExecuteOfficeJsCodeToolFinalDetails,
   ExecuteOfficeJsCodeToolResult,
   ExecuteOfficeJsCodeToolUpdateDetails,
 } from "./tool";

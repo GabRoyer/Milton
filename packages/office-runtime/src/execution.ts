@@ -11,8 +11,6 @@ export type ExcelRunner = (callback: (context: Excel.RequestContext) => Promise<
 export interface OfficeCodeExecutionDetails {
   /** Final execution status. */
   status: "success" | "error";
-  /** TypeScript source that was compiled and executed. */
-  code: string;
   /** Compile diagnostics associated with the run. */
   diagnostics: OfficeCodeDiagnostic[];
   /** Logs emitted by generated code. */
@@ -90,7 +88,6 @@ export async function executeOfficeCode(
     if (errorDiagnostics.length > 0) {
       throw new OfficeCodeExecutionError(formatCompileErrors(errorDiagnostics), {
         status: "error",
-        code: source,
         diagnostics: compileResult.diagnostics,
         logs,
         elapsedMs: now() - startedAt,
@@ -121,7 +118,6 @@ export async function executeOfficeCode(
     const serializedReturnValue = serializeReturnValue(returnValue);
     const details: OfficeCodeExecutionDetails = {
       status: "success",
-      code: source,
       diagnostics: compileResult.diagnostics,
       logs,
       returnValue: serializedReturnValue.value,
@@ -139,7 +135,6 @@ export async function executeOfficeCode(
 
     throw new OfficeCodeExecutionError(error instanceof Error ? error.message : String(error), {
       status: "error",
-      code: source,
       diagnostics,
       logs,
       elapsedMs: now() - startedAt,
