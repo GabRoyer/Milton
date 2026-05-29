@@ -16,8 +16,13 @@ export type {
   ExecuteOfficeJsCodeToolResult,
   ExecuteOfficeJsCodeToolUpdateDetails,
 } from "./tool";
-export type { ExcelRuntimeContext, OfficeCodeLogCallback, OfficeCodeLogEntry } from "./runtime/context";
 export type {
+  ExcelRuntimeContext,
+  OfficeCodeLogCallback,
+  OfficeCodeLogEntry,
+} from "./runtime/context";
+export type {
+  OfficeCodeEvaluator,
   OfficeCodeModule,
   OfficeCodeRunFunction,
 } from "./evaluation/unsafe-evaluator";

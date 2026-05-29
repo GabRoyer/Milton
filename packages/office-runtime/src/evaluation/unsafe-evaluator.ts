@@ -9,7 +9,10 @@ export interface OfficeCodeModule {
   run: OfficeCodeRunFunction;
 }
 
-// Phase 1 intentionally uses direct evaluation; the sandboxed evaluator replaces this module later.
+/** Evaluates compiled JavaScript into a runnable Office code module. */
+export type OfficeCodeEvaluator = (javascript: string) => Promise<OfficeCodeModule>;
+
+// Direct evaluation is the deliberate temporary implementation; a sandboxed evaluator should replace this interface boundary.
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor as new (
   ...args: string[]
 ) => (...args: unknown[]) => Promise<void>;
