@@ -106,6 +106,7 @@ The package should keep implementation areas separated by ownership:
 ```text
 packages/office-runtime/src/
   execution.ts        # core compile/evaluate/Excel.run orchestration
+  tool.ts             # Pi AgentTool adapter for execute_officejs_code
   compiler/
     compile.ts        # TypeScript virtual compiler host and compile result types
     raw-modules.d.ts  # ambient typing for Vite raw declaration imports
