@@ -15,6 +15,7 @@
   "dependencies": {
     "@earendil-works/pi-agent-core": "workspace:*",
     "@earendil-works/pi-ai": "workspace:*",
+    "@milton/office-runtime": "workspace:*",
     "react": "^18.2.0"
   },
   "devDependencies": {

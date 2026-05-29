@@ -139,11 +139,10 @@ export async function executeOfficeCode(
 
 let defaultCompilerClient: ReturnType<typeof createOfficeCodeCompilerWorkerClient> | undefined;
 
-/** Compiles with a lazy worker in browsers and falls back to direct compilation elsewhere. */
+/** Compiles with the lazy browser worker used by the Office taskpane. */
 async function compileOfficeCodeWithDefaultHost(source: string): Promise<OfficeCodeCompileResult> {
   if (typeof Worker === "undefined") {
-    const { compileOfficeCode } = await import("./compiler/compile");
-    return compileOfficeCode(source);
+    throw new Error("Office code compiler workers are not available in this runtime.");
   }
 
   defaultCompilerClient ??= createOfficeCodeCompilerWorkerClient();

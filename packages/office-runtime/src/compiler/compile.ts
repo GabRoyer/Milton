@@ -1,3 +1,5 @@
+/// <reference path="./raw-modules.d.ts" />
+
 import ts from "typescript";
 import miltonRuntimeDeclarations from "./built-in-types/milton-runtime.d.ts?raw";
 import officeJsDeclarations from "../../node_modules/@types/office-js/index.d.ts?raw";

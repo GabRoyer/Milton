@@ -2,7 +2,8 @@ import { FormEvent, KeyboardEvent, useMemo, useRef, useState } from "react";
 import { runAgentLoop, type AgentMessage as PiAgentMessage } from "@earendil-works/pi-agent-core/browser";
 import { getModels } from "@earendil-works/pi-ai/models";
 import { streamSimpleOpenAIResponses } from "@earendil-works/pi-ai/openai-responses";
-import type { AssistantMessage, Message, Model, TextContent, UserMessage } from "@earendil-works/pi-ai/types";
+import type { AssistantMessage, Message, Model, TextContent, ToolCall, UserMessage } from "@earendil-works/pi-ai/types";
+import { createExecuteOfficeJsCodeTool, EXECUTE_OFFICEJS_CODE_TOOL_NAME } from "@milton/office-runtime/tool";
 
 export interface ExcelTaskpaneAppProps {
   openAI: {
@@ -14,8 +15,16 @@ export interface ExcelTaskpaneAppProps {
   };
 }
 
-const MILTON_SYSTEM_PROMPT =
-  "You are Milton, an AI assistant running in an Excel task pane. For this milestone, you can only converse. Do not claim to inspect, read, edit, or automate the workbook yet. Be concise, practical, and clear about current limitations.";
+const MILTON_SYSTEM_PROMPT = [
+  "You are Milton, an AI assistant running in an Excel task pane.",
+  "Use execute_officejs_code whenever you need to inspect, read, edit, or automate the current workbook.",
+  "The tool compiles and runs TypeScript against Excel through the Excel OfficeJS API.",
+  "Write code as an async run(ctx: ExcelRuntimeContext) function and use ctx.context, ctx.workbook, and ctx.sync() for OfficeJS batching.",
+  "Return a JSON-serializable object from run(ctx) for any workbook data or results you need to see after the tool runs.",
+  "Do not import packages, access the DOM, make network requests, or use browser globals from generated workbook code.",
+  "The execution tool is not sandboxed in this milestone, so only run code that is directly relevant to the user's workbook request.",
+  "Be concise, practical, and clear.",
+].join("\n");
 
 type TaskpaneMessageStatus = "complete" | "streaming" | "error" | "cancelled";
 
@@ -31,7 +40,7 @@ const INITIAL_MESSAGES: TaskpaneMessage[] = [
   {
     id: "welcome",
     role: "assistant",
-    content: "I am Milton. I can talk through spreadsheet work with you, but I am not connected to workbook tools yet.",
+    content: "I am Milton. Ask me to inspect or edit this workbook.",
     createdAt: new Date().toISOString(),
     status: "complete",
   },
@@ -47,6 +56,7 @@ export function ExcelTaskpaneApp({ devProfile, openAI }: ExcelTaskpaneAppProps) 
   const piMessagesRef = useRef<PiAgentMessage[]>([]);
   const isConfigured = openAI.apiKey.trim().length > 0;
   const model = useMemo(() => resolveOpenAIResponsesModel(openAI.model), [openAI.model]);
+  const tools = useMemo(() => [createExecuteOfficeJsCodeTool()], []);
 
   function updateMessages(nextMessages: TaskpaneMessage[]) {
     messagesRef.current = nextMessages;
@@ -91,16 +101,27 @@ export function ExcelTaskpaneApp({ devProfile, openAI }: ExcelTaskpaneAppProps) 
         {
           systemPrompt: MILTON_SYSTEM_PROMPT,
           messages: piMessagesRef.current,
-          tools: [],
+          tools,
         },
         {
           apiKey: openAI.apiKey,
           cacheRetention: "none",
           convertToLlm: (agentMessages) => agentMessages.filter(isLlmMessage),
           model,
-          shouldStopAfterTurn: () => true,
+          shouldStopAfterTurn: ({ toolResults }) => toolResults.length === 0,
+          toolExecution: "sequential",
         },
         (agentEvent) => {
+          if (agentEvent.type === "tool_execution_start") {
+            setStatus(getToolExecutionStartText(agentEvent.toolName));
+            return;
+          }
+
+          if (agentEvent.type === "tool_execution_end") {
+            setStatus(agentEvent.isError ? getToolExecutionErrorText(agentEvent.result) : null);
+            return;
+          }
+
           if (agentEvent.type === "message_start" && agentEvent.message.role === "user") {
             appendMessage({
               id: userMessageId,
@@ -294,6 +315,12 @@ function getMessageText(message: PiAgentMessage): string {
       return text;
     }
 
+    const toolCallText = getAssistantToolCallText(message);
+
+    if (toolCallText) {
+      return toolCallText;
+    }
+
     if (message.errorMessage) {
       return message.errorMessage;
     }
@@ -302,6 +329,43 @@ function getMessageText(message: PiAgentMessage): string {
   }
 
   return "";
+}
+
+/** Builds visible text for assistant messages that only contain tool calls. */
+function getAssistantToolCallText(message: AssistantMessage): string {
+  const toolCalls = message.content.filter((content): content is ToolCall => content.type === "toolCall");
+
+  if (toolCalls.some((toolCall) => toolCall.name === EXECUTE_OFFICEJS_CODE_TOOL_NAME)) {
+    return "Using the Excel OfficeJS workbook tool.";
+  }
+
+  if (toolCalls.length > 0) {
+    return "Using a tool.";
+  }
+
+  return "";
+}
+
+/** Builds taskpane status text when a tool starts running. */
+function getToolExecutionStartText(toolName: string): string {
+  if (toolName === EXECUTE_OFFICEJS_CODE_TOOL_NAME) {
+    return "Running OfficeJS workbook code.";
+  }
+
+  return `Running ${toolName}.`;
+}
+
+/** Extracts readable taskpane status text from an errored tool result. */
+function getToolExecutionErrorText(result: unknown): string {
+  const content = (result as { content?: Array<{ text?: unknown; type?: unknown }> }).content;
+  const text =
+    content
+      ?.filter((block) => block.type === "text" && typeof block.text === "string")
+      .map((block) => block.text)
+      .join("\n")
+      .trim() ?? "";
+
+  return text || "OfficeJS workbook code failed.";
 }
 
 function resolveOpenAIResponsesModel(modelId: string): Model<"openai-responses"> {

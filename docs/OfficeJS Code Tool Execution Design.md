@@ -265,7 +265,7 @@ new Worker(new URL("./worker.ts", import.meta.url), {
 });
 ```
 
-That lets Vite discover the worker entrypoint, build it as a separate chunk, and keep the TypeScript compiler plus raw `@types/office-js` declaration text out of the normal taskpane startup bundle. Non-browser tests can inject a compiler or fall back to a dynamic direct compiler import.
+That lets Vite discover the worker entrypoint, build it as a separate chunk, and keep the TypeScript compiler plus raw `@types/office-js` declaration text out of the normal taskpane startup bundle. Non-browser tests should inject a direct compiler implementation instead of using the default worker-backed compiler.
 
 The worker is a responsiveness boundary, not a security boundary. It does not replace sandboxing.
 
