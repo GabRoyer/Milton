@@ -106,9 +106,11 @@ packages/office-runtime/src/
   execution.ts        # core compile/evaluate/Excel.run orchestration
   compiler/
     compile.ts        # TypeScript virtual compiler host and compile result types
-    built-in-types/   # raw-imported declarations injected into generated code typechecking
+    raw-modules.d.ts  # ambient typing for Vite raw declaration imports
     worker.ts         # web worker entrypoint
     worker-client.ts  # lazy worker client and request tracking
+    built-in-types/   # Milton declarations injected into generated code typechecking
+      milton-runtime.d.ts
   runtime/
     context.ts        # ExcelRuntimeContext and ctx construction
   evaluation/
@@ -273,7 +275,7 @@ Initial compiler behavior:
 
 - Use a TypeScript `Program` through a virtual compiler host in the compiler worker.
 - Emit modern JavaScript compatible with the Office WebView targets already used by the app.
-- Typecheck generated code against Milton runtime declarations and the installed `@types/office-js` declarations.
+- Typecheck generated code against TypeScript's packaged standard library declarations, Milton runtime declarations, and the installed `@types/office-js` declarations.
 - Report syntactic and semantic diagnostics.
 - Strip TypeScript types and emit evaluator-compatible CommonJS-style output.
 - Reject import declarations before evaluation with a clear unsupported-imports diagnostic.
@@ -295,9 +297,9 @@ Recommended initial compiler options:
 The virtual compiler host should provide at least:
 
 - the generated source as an in-memory entry file,
+- the standard library declaration files from the installed `typescript` package,
 - `ExcelRuntimeContext` declarations,
 - the installed `@types/office-js` declaration file instead of a hand-maintained Excel API subset,
-- minimal built-in standard declarations kept as raw-imported files,
 - a no-op module resolver that rejects model-authored imports.
 
 Typechecking is worth including in the milestone because it gives the model actionable feedback about nonexistent OfficeJS APIs, wrong property names, and mismatched value shapes before any workbook mutation runs.

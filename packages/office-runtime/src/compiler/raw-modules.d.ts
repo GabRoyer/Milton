@@ -10,3 +10,18 @@ declare module "*?raw" {
   const content: string;
   export default content;
 }
+
+interface ImportMeta {
+  /** Vite eager glob import used to bundle TypeScript's declaration files into the compiler worker. */
+  glob<T = unknown>(
+    pattern: string,
+    options: {
+      /** Import the modules eagerly instead of returning loader functions. */
+      eager: true;
+      /** Named export to read from each matched module. */
+      import?: string;
+      /** Query string passed to Vite's module loader. */
+      query?: string;
+    },
+  ): Record<string, T>;
+}

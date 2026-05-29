@@ -1,12 +1,24 @@
 import ts from "typescript";
 import miltonRuntimeDeclarations from "./built-in-types/milton-runtime.d.ts?raw";
-import standardDeclarations from "./built-in-types/standard.d.ts?raw";
 import officeJsDeclarations from "../../node_modules/@types/office-js/index.d.ts?raw";
 
 const ENTRY_FILE = "/entry.ts";
-const LIB_FILE = "/milton-lib.d.ts";
 const RUNTIME_FILE = "/milton-office-runtime.d.ts";
 const OFFICE_JS_FILE = "/node_modules/@types/office-js/index.d.ts";
+const TYPESCRIPT_LIB_DIR = "/node_modules/typescript/lib";
+const TYPESCRIPT_LIB_FILE = "lib.es2020.d.ts";
+
+const typescriptEsLibDeclarationModules = import.meta.glob("../../node_modules/typescript/lib/lib.es*.d.ts", {
+  eager: true,
+  import: "default",
+  query: "?raw",
+}) as Record<string, string>;
+
+const typescriptDecoratorLibDeclarationModules = import.meta.glob("../../node_modules/typescript/lib/lib.decorators*.d.ts", {
+  eager: true,
+  import: "default",
+  query: "?raw",
+}) as Record<string, string>;
 
 const compilerOptions: ts.CompilerOptions = {
   target: ts.ScriptTarget.ES2020,
@@ -15,7 +27,7 @@ const compilerOptions: ts.CompilerOptions = {
   noEmitOnError: true,
   strict: true,
   skipLibCheck: true,
-  noLib: true,
+  lib: [TYPESCRIPT_LIB_FILE],
 };
 
 /** Severity levels reported by the Office code compiler. */
@@ -56,9 +68,9 @@ export function compileOfficeCode(source: string): OfficeCodeCompileResult {
 
   const files = new Map<string, string>([
     [ENTRY_FILE, source],
-    [LIB_FILE, standardDeclarations],
     [RUNTIME_FILE, miltonRuntimeDeclarations],
     [OFFICE_JS_FILE, officeJsDeclarations],
+    ...getTypeScriptLibFiles(),
   ]);
   let javascript = "";
 
@@ -67,7 +79,7 @@ export function compileOfficeCode(source: string): OfficeCodeCompileResult {
       javascript = text;
     }
   });
-  const program = ts.createProgram([ENTRY_FILE, LIB_FILE, RUNTIME_FILE, OFFICE_JS_FILE], compilerOptions, host);
+  const program = ts.createProgram([ENTRY_FILE, RUNTIME_FILE, OFFICE_JS_FILE], compilerOptions, host);
   const diagnostics = ts.getPreEmitDiagnostics(program).map(toOfficeDiagnostic);
 
   if (diagnostics.some((diagnostic) => diagnostic.severity === "error")) {
@@ -106,7 +118,8 @@ function createCompilerHost(files: Map<string, string>, writeFile: ts.WriteFileC
       return ts.createSourceFile(fileName, source, languageVersion, true);
     },
     writeFile,
-    getDefaultLibFileName: () => LIB_FILE,
+    getDefaultLibFileName: () => TYPESCRIPT_LIB_FILE,
+    getDefaultLibLocation: () => TYPESCRIPT_LIB_DIR,
     useCaseSensitiveFileNames: () => true,
     getCanonicalFileName: (fileName) => fileName,
     getCurrentDirectory: () => "/",
@@ -117,6 +130,22 @@ function createCompilerHost(files: Map<string, string>, writeFile: ts.WriteFileC
     getDirectories: () => [],
     resolveModuleNames: (moduleNames) => moduleNames.map(() => undefined),
   };
+}
+
+/** Maps TypeScript's packaged standard library declarations into virtual compiler files. */
+function getTypeScriptLibFiles(): Array<[string, string]> {
+  return Object.entries({
+    ...typescriptEsLibDeclarationModules,
+    ...typescriptDecoratorLibDeclarationModules,
+  }).map(([fileName, source]) => [
+    `${TYPESCRIPT_LIB_DIR}/${getBaseName(fileName)}`,
+    source,
+  ]);
+}
+
+/** Returns the last path segment for virtual declaration file names. */
+function getBaseName(fileName: string): string {
+  return fileName.slice(fileName.lastIndexOf("/") + 1);
 }
 
 /** Finds unsupported imports before TypeScript tries module resolution. */

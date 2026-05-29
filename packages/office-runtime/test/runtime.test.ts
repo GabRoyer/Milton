@@ -31,6 +31,23 @@ export async function run(ctx: ExcelRuntimeContext) {
     expect(result.javascript).toContain("exports.run = run");
   });
 
+  it("typechecks generated code against TypeScript standard library declarations", () => {
+    const result = compileOfficeCode(`
+export async function run(_ctx: ExcelRuntimeContext) {
+  const entries: Array<[string, number]> = [["value", 1]];
+  const values = new Map(entries);
+  const object: Record<string, number> = Object.fromEntries(values);
+  return {
+    message: "Used standard library APIs.",
+    hasValue: [1, 2, 3].includes(object.value),
+  };
+}
+`);
+
+    expect(result.diagnostics).toEqual([]);
+    expect(result.javascript).toContain("exports.run = run");
+  });
+
   it("returns semantic diagnostics for nonexistent OfficeJS APIs", () => {
     const result = compileOfficeCode(`
 export async function run(ctx: ExcelRuntimeContext) {
