@@ -6,7 +6,8 @@
   "description": "OfficeJS code execution runtime for Milton.",
   "license": "MIT",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./compiler": "./src/compiler/compile.ts"
   },
   "scripts": {
     "build": "tsc --noEmit -p tsconfig.json",

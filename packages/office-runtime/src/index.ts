@@ -1,4 +1,3 @@
-export { compileOfficeCode } from "./compiler/compile";
 export { createOfficeCodeCompilerWorkerClient } from "./compiler/worker-client";
 export { executeOfficeCode, OfficeCodeExecutionError } from "./execution";
 export { createExcelRuntimeContext } from "./runtime/context";

@@ -93,10 +93,12 @@ This package owns the browser-compatible code execution runtime:
 ```text
 @milton/office-runtime
   - executeOfficeCode(source, options)
-  - compileOfficeCode(source, options)
   - createOfficeCodeCompilerWorkerClient(options)
   - createExcelRuntimeContext(options)
   - createExecuteOfficeJsCodeTool(options)
+
+@milton/office-runtime/compiler
+  - compileOfficeCode(source, options)
 ```
 
 The package should keep implementation areas separated by ownership:
