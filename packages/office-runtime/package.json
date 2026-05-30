@@ -7,13 +7,16 @@
   "license": "MIT",
   "exports": {
     ".": "./src/index.ts",
-    "./compiler": "./src/compiler/compile.ts"
+    "./compiler": "./src/compiler/compile.ts",
+    "./tool": "./src/tool.ts"
   },
   "scripts": {
     "build": "tsc --noEmit -p tsconfig.json",
     "test": "vitest --run"
   },
   "dependencies": {
+    "@earendil-works/pi-agent-core": "workspace:*",
+    "typebox": "1.1.38",
     "typescript": "^5.9.3"
   },
   "devDependencies": {

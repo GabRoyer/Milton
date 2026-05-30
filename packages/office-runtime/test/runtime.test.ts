@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { compileOfficeCode } from "../src/compiler/compile";
 import { executeOfficeCode, OfficeCodeExecutionError, type ExcelRunner } from "../src/execution";
 import { unsafeEvaluateOfficeCode } from "../src/evaluation/unsafe-evaluator";
+import { createExecuteOfficeJsCodeTool, EXECUTE_OFFICEJS_CODE_TOOL_NAME } from "../src/tool";
 
 /** Minimal Excel.run adapter used by runtime tests. */
 const mockExcelRunner: ExcelRunner = async (callback) => {
@@ -123,7 +124,7 @@ export async function run(ctx: ExcelRuntimeContext) {
   };
 }
 `,
-      { excelRunner: mockExcelRunner },
+      { compile: compileOfficeCode, excelRunner: mockExcelRunner },
     );
 
     expect(result.content).toBe(`OfficeJS code executed successfully.
@@ -156,11 +157,13 @@ Returned data:
   it("throws a clear error when run is missing", async () => {
     await expect(
       executeOfficeCode("export const value = 1;", {
+        compile: compileOfficeCode,
         excelRunner: mockExcelRunner,
       }),
     ).rejects.toThrow(OfficeCodeExecutionError);
     await expect(
       executeOfficeCode("export const value = 1;", {
+        compile: compileOfficeCode,
         excelRunner: mockExcelRunner,
       }),
     ).rejects.toThrow("run(ctx)");
@@ -174,12 +177,49 @@ export async function run(_ctx: ExcelRuntimeContext) {
   throw new Error("boom");
 }
 `,
-        { excelRunner: mockExcelRunner },
+        { compile: compileOfficeCode, excelRunner: mockExcelRunner },
       ),
     ).rejects.toMatchObject({
       name: "OfficeCodeExecutionError",
       details: {
         status: "error",
+      },
+    });
+  });
+});
+
+describe("createExecuteOfficeJsCodeTool", () => {
+  it("creates a sequential agent tool that returns execution content and details", async () => {
+    const tool = createExecuteOfficeJsCodeTool({
+      compile: compileOfficeCode,
+      excelRunner: mockExcelRunner,
+    });
+
+    const result = await tool.execute("tool-call-1", {
+      code: `
+export async function run(_ctx: ExcelRuntimeContext) {
+  return { message: "Tool ran." };
+}
+`,
+    });
+
+    expect(tool.name).toBe(EXECUTE_OFFICEJS_CODE_TOOL_NAME);
+    expect(tool.executionMode).toBe("sequential");
+    expect(result.content).toEqual([
+      {
+        type: "text",
+        text: `OfficeJS code executed successfully.
+
+Returned data:
+{
+  "message": "Tool ran."
+}`,
+      },
+    ]);
+    expect(result.details).toMatchObject({
+      status: "success",
+      returnValue: {
+        message: "Tool ran.",
       },
     });
   });

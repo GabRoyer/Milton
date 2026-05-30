@@ -3,7 +3,9 @@
  *
  * Vite turns `?raw` imports into string contents at bundle time. The package
  * build still runs plain `tsc --noEmit`, so it needs this declaration to accept
- * the OfficeJS and built-in type declaration imports in `compile.ts`.
+ * the OfficeJS and built-in type declaration imports in `compile.ts`. That
+ * compiler module references this file directly so consuming packages also see
+ * the raw-import type.
  */
 declare module "*?raw" {
   /** Imported file contents emitted by Vite's raw import handling. */

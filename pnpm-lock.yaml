@@ -67,6 +67,12 @@ importers:
 
   packages/office-runtime:
     dependencies:
+      '@earendil-works/pi-agent-core':
+        specifier: workspace:*
+        version: link:../pi-agent-core
+      typebox:
+        specifier: 1.1.38
+        version: 1.1.38
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -148,6 +154,9 @@ importers:
       '@earendil-works/pi-ai':
         specifier: workspace:*
         version: link:../pi-ai
+      '@milton/office-runtime':
+        specifier: workspace:*
+        version: link:../office-runtime
       react:
         specifier: ^18.2.0
         version: 18.3.1
