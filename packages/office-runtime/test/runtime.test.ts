@@ -152,6 +152,7 @@ Returned data:
         values: [[1]],
       },
     });
+    expect(result.details).not.toHaveProperty("code");
   });
 
   it("throws a clear error when run is missing", async () => {
@@ -167,6 +168,39 @@ Returned data:
         excelRunner: mockExcelRunner,
       }),
     ).rejects.toThrow("run(ctx)");
+  });
+
+  it("formats compile errors with source location and structured details", async () => {
+    try {
+      await executeOfficeCode(
+        `
+export async function run(ctx: ExcelRuntimeContext) {
+  ctx.workbook.worksheets.notARealApi();
+}
+`,
+        { compile: compileOfficeCode, excelRunner: mockExcelRunner },
+      );
+      throw new Error("Expected executeOfficeCode to throw");
+    } catch (error) {
+      expect(error).toBeInstanceOf(OfficeCodeExecutionError);
+      expect(error).toMatchObject({
+        message: expect.stringContaining("Line "),
+        details: {
+          status: "error",
+        },
+      });
+      expect((error as OfficeCodeExecutionError).message).toContain("Column ");
+      expect((error as OfficeCodeExecutionError).message).toMatch(/\[\d+\]/);
+      expect((error as OfficeCodeExecutionError).details).not.toHaveProperty("code");
+      expect((error as OfficeCodeExecutionError).details.diagnostics).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            line: expect.any(Number),
+            column: expect.any(Number),
+          }),
+        ]),
+      );
+    }
   });
 
   it("wraps runtime errors with execution details", async () => {
@@ -218,8 +252,68 @@ Returned data:
     ]);
     expect(result.details).toMatchObject({
       status: "success",
+      code: expect.stringContaining("Tool ran"),
       returnValue: {
         message: "Tool ran.",
+      },
+    });
+  });
+
+  it("streams OfficeJS logs through tool updates", async () => {
+    const tool = createExecuteOfficeJsCodeTool({
+      compile: compileOfficeCode,
+      excelRunner: mockExcelRunner,
+    });
+    const updates: unknown[] = [];
+
+    await tool.execute(
+      "tool-call-1",
+      {
+        code: `
+export async function run(ctx: ExcelRuntimeContext) {
+  ctx.log("read range", { address: "A1" });
+  return { message: "Tool ran." };
+}
+`,
+      },
+      undefined,
+      (update) => updates.push(update),
+    );
+
+    expect(updates).toMatchObject([
+      {
+        content: [{ type: "text", text: "OfficeJS log: read range" }],
+        details: {
+          status: "running",
+          code: expect.stringContaining("ctx.log"),
+          latestLog: {
+            message: "read range",
+            details: { address: "A1" },
+          },
+        },
+      },
+    ]);
+  });
+
+  it("adds submitted code to thrown tool error details", async () => {
+    const tool = createExecuteOfficeJsCodeTool({
+      compile: compileOfficeCode,
+      excelRunner: mockExcelRunner,
+    });
+    const source = `
+export async function run(ctx: ExcelRuntimeContext) {
+  ctx.workbook.worksheets.notARealApi();
+}
+`;
+
+    await expect(
+      tool.execute("tool-call-1", {
+        code: source,
+      }),
+    ).rejects.toMatchObject({
+      details: {
+        status: "error",
+        code: source,
       },
     });
   });

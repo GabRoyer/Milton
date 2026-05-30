@@ -21,7 +21,8 @@ TypeScript source inside the workspace:
 - Added `@earendil-works/pi-agent-core/types` for type-only consumers.
 - Changed `@earendil-works/pi-ai` to `workspace:*`.
 - Changed `build` to `tsc --noEmit -p tsconfig.json`.
-- Trimmed local dev dependencies to the TypeScript checker needed for this workspace.
+- Trimmed local dev dependencies to the TypeScript checker and Vitest runner
+  needed for this workspace.
 
 ### Browser entrypoint
 
@@ -50,6 +51,21 @@ and lets the app choose the exact browser-compatible provider stream.
 `src/types.ts` defines `StreamFn` directly using `Model`, `Context`,
 `SimpleStreamOptions`, and `AssistantMessageEventStream` from
 `@earendil-works/pi-ai/types` instead of deriving it from `streamSimple`.
+
+### Structured thrown tool error details
+
+`src/agent-loop.ts` preserves a thrown tool error's `details` payload when
+converting the thrown error into an `AgentToolResult`.
+
+Upstream converted thrown tool failures into text content with empty
+`details`. Milton needs structured details from the OfficeJS execution tool so
+compile diagnostics, logs, elapsed time, and submitted source metadata can reach
+`tool_execution_end` and taskpane debugging UI even when the tool fails.
+
+The local behavior is limited to error paths in tool execution and
+`afterToolCall`: when the thrown value exposes a non-`undefined` `details`
+property, that value is copied into the generated error result; otherwise the
+result keeps the upstream empty details object.
 
 ### Local TypeScript config
 

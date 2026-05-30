@@ -9,7 +9,13 @@ export type {
   OfficeCodeDiagnosticSeverity,
 } from "./compiler/compile";
 export type { ExcelRunner, ExecuteOfficeCodeOptions, OfficeCodeExecutionDetails, OfficeCodeExecutionResult } from "./execution";
-export type { CreateExecuteOfficeJsCodeToolOptions, ExecuteOfficeJsCodeToolResult } from "./tool";
+export type {
+  CreateExecuteOfficeJsCodeToolOptions,
+  ExecuteOfficeJsCodeToolDetails,
+  ExecuteOfficeJsCodeToolFinalDetails,
+  ExecuteOfficeJsCodeToolResult,
+  ExecuteOfficeJsCodeToolUpdateDetails,
+} from "./tool";
 export type { ExcelRuntimeContext, OfficeCodeLogCallback, OfficeCodeLogEntry } from "./runtime/context";
 export type {
   OfficeCodeModule,

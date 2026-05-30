@@ -307,6 +307,82 @@ describe("agentLoop with AgentMessage", () => {
 		}
 	});
 
+	it("should emit tool updates and preserve thrown tool error details", async () => {
+		const toolSchema = Type.Object({ value: Type.String() });
+		const tool: AgentTool<typeof toolSchema, { status: string; latestLog?: { message: string } }> = {
+			name: "echo",
+			label: "Echo",
+			description: "Echo tool",
+			parameters: toolSchema,
+			async execute(_toolCallId, params, _signal, onUpdate) {
+				onUpdate?.({
+					content: [{ type: "text", text: `progress: ${params.value}` }],
+					details: { status: "running", latestLog: { message: params.value } },
+				});
+
+				throw Object.assign(new Error("tool failed"), {
+					details: {
+						status: "error",
+						latestLog: { message: "failed" },
+					},
+				});
+			},
+		};
+
+		const context: AgentContext = {
+			systemPrompt: "",
+			messages: [],
+			tools: [tool],
+		};
+
+		const config: AgentLoopConfig = {
+			model: createModel(),
+			convertToLlm: identityConverter,
+			shouldStopAfterTurn: async () => true,
+		};
+
+		const stream = agentLoop([createUserMessage("echo something")], context, config, undefined, () => {
+			const mockStream = new MockAssistantStream();
+			queueMicrotask(() => {
+				const message = createAssistantMessage(
+					[{ type: "toolCall", id: "tool-1", name: "echo", arguments: { value: "hello" } }],
+					"toolUse",
+				);
+				mockStream.push({ type: "done", reason: "toolUse", message });
+			});
+			return mockStream;
+		});
+
+		const events: AgentEvent[] = [];
+		for await (const event of stream) {
+			events.push(event);
+		}
+
+		const toolUpdate = events.find(
+			(event): event is Extract<AgentEvent, { type: "tool_execution_update" }> =>
+				event.type === "tool_execution_update",
+		);
+		const toolEnd = events.find(
+			(event): event is Extract<AgentEvent, { type: "tool_execution_end" }> => event.type === "tool_execution_end",
+		);
+
+		expect(toolUpdate?.partialResult).toMatchObject({
+			content: [{ type: "text", text: "progress: hello" }],
+			details: {
+				status: "running",
+				latestLog: { message: "hello" },
+			},
+		});
+		expect(toolEnd?.isError).toBe(true);
+		expect(toolEnd?.result).toMatchObject({
+			content: [{ type: "text", text: "tool failed" }],
+			details: {
+				status: "error",
+				latestLog: { message: "failed" },
+			},
+		});
+	});
+
 	it("should execute mutated beforeToolCall args without revalidation", async () => {
 		const toolSchema = Type.Object({ value: Type.String() });
 		const executed: Array<string | number> = [];
