@@ -1,0 +1,23 @@
+{
+  "name": "@milton/office-runtime",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "description": "OfficeJS code execution runtime for Milton.",
+  "license": "MIT",
+  "exports": {
+    ".": "./src/index.ts",
+    "./compiler": "./src/compiler/compile.ts"
+  },
+  "scripts": {
+    "build": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest --run"
+  },
+  "dependencies": {
+    "typescript": "^5.9.3"
+  },
+  "devDependencies": {
+    "@types/office-js": "^1.0.377",
+    "vitest": "^3.2.4"
+  }
+}
