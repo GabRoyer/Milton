@@ -48,6 +48,7 @@ apps/
 docs/
 packages/
   office-host/         Typed Office host integrations
+  office-runtime/      OfficeJS code execution runtime and agent tool
   pi-agent-core/       Vendored Pi agent package, with a browser entrypoint for Milton
   pi-ai/               Vendored Pi model/provider abstraction package
   ui/                  Shared React UI
