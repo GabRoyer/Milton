@@ -117,7 +117,7 @@ packages/office-runtime/src/
   runtime/
     context.ts        # ExcelRuntimeContext and ctx construction
   evaluation/
-    unsafe-evaluator.ts
+    unsafe-evaluator.ts # OfficeCodeEvaluator implementation using direct unsafe evaluation
   index.ts            # public package export surface
 ```
 
@@ -321,6 +321,14 @@ Because sandboxing is out of scope, the first evaluator can use a direct browser
 
 The runtime should still avoid exposing browser globals intentionally through the API. The first implementation cannot prevent access to globals, but the tool contract should guide generated code through `run(ctx)`.
 
+The replacement boundary for future sandboxing should be a small evaluator interface:
+
+```ts
+type OfficeCodeEvaluator = (javascript: string) => Promise<OfficeCodeModule>;
+```
+
+`executeOfficeCode` should depend on that interface. The default implementation can be the unsafe evaluator for this milestone, while tests and the later sandbox can inject a different evaluator without changing the agent tool, compiler, or result contract.
+
 One practical evaluator approach:
 
 ```text
@@ -391,7 +399,9 @@ It should instruct the model to:
 - Use `execute_officejs_code` for workbook inspection and mutation.
 - Use the Excel OfficeJS API through `ctx`.
 - Write TypeScript code with `export async function run(ctx: ExcelRuntimeContext)`.
-- Prefer normal OfficeJS batching with `ctx.sync()`.
+- Use `ctx.workbook` for normal workbook object access.
+- Use `ctx.context` only when an OfficeJS API requires the raw `Excel.RequestContext`.
+- Batch OfficeJS `load()` calls and mutations before `ctx.sync()`, then read loaded properties after the sync completes.
 - Return a JSON-serializable object containing any workbook data or results it needs to see.
 - Avoid imports, DOM access, network access, timers, or browser globals.
 - Inspect and mutate the workbook directly when the user asks for workbook changes.
@@ -516,15 +526,14 @@ Validation:
 - targeted UI tests if the repo has a test harness by then
 - manual smoke tests for compile error, runtime error, successful mutation, and log output
 
-### Phase 4: Type Surface Hardening and Pre-Sandbox Policy Prep
+### Phase 4: Runtime Contract and Sandbox Boundary Cleanup
 
 Branch: `codex/officejs-code-tool-phase-4`
 
 PR scope:
 
-- Expand and harden the maintained runtime declaration surface based on Phase 1-3 usage.
+- Align the maintained runtime declaration surface with Phase 1-3 usage.
 - Refine prompt examples around `ctx.context`, `ctx.workbook`, and `ctx.sync()`.
-- Add lightweight source preflight checks that produce warnings, not security decisions.
 - Document the future sandbox interface and the replacement point for the unsafe evaluator.
 
 Dependencies:
@@ -534,7 +543,7 @@ Dependencies:
 Validation:
 
 - package builds
-- tests for preflight warning behavior
+- targeted runtime tests
 - manual verification that normal OfficeJS snippets still execute
 
 ## Later Work

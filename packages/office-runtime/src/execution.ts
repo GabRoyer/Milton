@@ -3,6 +3,7 @@ import type { OfficeCodeCompileResult, OfficeCodeDiagnostic } from "./compiler/c
 import { createExcelRuntimeContext } from "./runtime/context";
 import type { OfficeCodeLogEntry } from "./runtime/context";
 import { unsafeEvaluateOfficeCode } from "./evaluation/unsafe-evaluator";
+import type { OfficeCodeEvaluator } from "./evaluation/unsafe-evaluator";
 
 /** Host adapter for running callbacks inside Excel.run. */
 export type ExcelRunner = (callback: (context: Excel.RequestContext) => Promise<void>) => Promise<void>;
@@ -42,7 +43,7 @@ export interface ExecuteOfficeCodeOptions {
   /** Optional compiler override, typically for tests. */
   compile?: (source: string) => OfficeCodeCompileResult | Promise<OfficeCodeCompileResult>;
   /** Optional evaluator override, typically for future sandboxing or tests. */
-  evaluate?: typeof unsafeEvaluateOfficeCode;
+  evaluate?: OfficeCodeEvaluator;
   /** Optional Excel.run adapter override, typically for tests. */
   excelRunner?: ExcelRunner;
   /** Optional cancellation signal checked around cooperative execution boundaries. */

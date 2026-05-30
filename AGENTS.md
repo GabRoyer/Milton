@@ -68,4 +68,5 @@ Next PR: <link or pending>
 - Avoid barrel import files where practical. Prefer importing from the module that owns the symbol so dependencies stay explicit and refactors remain local.
 - Keep TypeScript type definitions close to the module that owns or primarily uses the contract. Avoid catch-all `types.ts` files unless the type is genuinely shared across unrelated modules and has no clearer owner.
 - Prefer consuming third-party declaration files from the installed package instead of copying and maintaining local declaration strings that can drift from upstream.
+- Do not create custom aliases or wrapper interfaces for generic record/JSON shapes, such as recursive `JsonValue` unions or `{ [key: string]: ... }` objects under a project-specific name. Use the concrete domain shape when one exists, or use `unknown` at boundaries that intentionally accept arbitrary structured data.
 - Add concise JSDoc headers to TypeScript and JavaScript functions, interfaces, and interface/class fields. Headers should describe purpose or contract, not restate the symbol name; generated code and copied external declarations are exempt.
