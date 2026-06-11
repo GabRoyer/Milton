@@ -1,5 +1,6 @@
 import { createOfficeCodeCompilerWorkerClient } from "./compiler/worker-client";
 import type { OfficeCodeCompileResult, OfficeCodeDiagnostic } from "./compiler/compile";
+import type { OfficeCodeExecutionWorkerClient } from "./execution/worker-client";
 import { createExcelRuntimeContext } from "./runtime/context";
 import type { OfficeCodeLogEntry } from "./runtime/context";
 import { unsafeEvaluateOfficeCode } from "./evaluation/unsafe-evaluator";
@@ -46,6 +47,10 @@ export interface ExecuteOfficeCodeOptions {
   evaluate?: OfficeCodeEvaluator;
   /** Optional Excel.run adapter override, typically for tests. */
   excelRunner?: ExcelRunner;
+  /** Optional worker executor used to run compiled JavaScript off the taskpane thread. */
+  executionWorker?: OfficeCodeExecutionWorkerClient;
+  /** Optional hard timeout for worker-backed execution in milliseconds. */
+  executionTimeoutMs?: number;
   /** Optional cancellation signal checked around cooperative execution boundaries. */
   signal?: AbortSignal;
   /** Optional callback invoked whenever generated code emits a log entry. */
@@ -97,6 +102,19 @@ export async function executeOfficeCode(
 
     throwIfAborted(options.signal);
 
+    if (options.executionWorker) {
+      return await executeCompiledJavaScriptInWorker(compileResult.javascript, {
+        diagnostics,
+        executionWorker: options.executionWorker,
+        executionTimeoutMs: options.executionTimeoutMs,
+        logs,
+        now,
+        onLog: options.onLog,
+        signal: options.signal,
+        startedAt,
+      });
+    }
+
     const module = await evaluate(compileResult.javascript);
     let returnValue: unknown;
 
@@ -141,6 +159,54 @@ export async function executeOfficeCode(
       elapsedMs: now() - startedAt,
     });
   }
+}
+
+/** State needed to finish a worker-backed Office code run. */
+interface ExecuteCompiledJavaScriptInWorkerOptions {
+  /** Diagnostics produced while compiling the source. */
+  diagnostics: OfficeCodeDiagnostic[];
+  /** Worker client used to run compiled JavaScript. */
+  executionWorker: OfficeCodeExecutionWorkerClient;
+  /** Optional hard timeout for the worker run in milliseconds. */
+  executionTimeoutMs?: number;
+  /** Shared log accumulator for the run. */
+  logs: OfficeCodeLogEntry[];
+  /** Clock used to report elapsed execution time. */
+  now: () => number;
+  /** Optional callback invoked for each emitted log entry. */
+  onLog?: (entry: OfficeCodeLogEntry) => void;
+  /** Optional cancellation signal used to kill the active worker run. */
+  signal?: AbortSignal;
+  /** Timestamp captured when execution started. */
+  startedAt: number;
+}
+
+/** Runs compiled JavaScript in an execution worker and formats the result. */
+async function executeCompiledJavaScriptInWorker(
+  javascript: string,
+  options: ExecuteCompiledJavaScriptInWorkerOptions,
+): Promise<OfficeCodeExecutionResult> {
+  const workerResult = await options.executionWorker.run(javascript, {
+    timeoutMs: options.executionTimeoutMs,
+    signal: options.signal,
+    onLog: (entry) => {
+      options.logs.push(entry);
+      options.onLog?.(entry);
+    },
+  });
+  const serializedReturnValue = serializeReturnValue(workerResult.returnValue);
+  const details: OfficeCodeExecutionDetails = {
+    status: "success",
+    diagnostics: options.diagnostics,
+    logs: options.logs,
+    returnValue: serializedReturnValue.value,
+    elapsedMs: options.now() - options.startedAt,
+  };
+
+  return {
+    content: getSuccessContent(serializedReturnValue),
+    details,
+  };
 }
 
 let defaultCompilerClient: ReturnType<typeof createOfficeCodeCompilerWorkerClient> | undefined;
